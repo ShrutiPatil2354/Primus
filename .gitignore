@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 *.pyo
+*__init__.py
 
 # Built C++ binaries
 *.so
