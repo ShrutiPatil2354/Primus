@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Built C++ binaries
+*.so
+cpp_core/build/
+
+# Data / memory / media (private)
+data/
+*.wav
+*.mp3
+*.jpg
+
+# Model weights (team downloads via setup.sh)
+yolov8n.pt
+yolov8s.pt
+*.onnx
+*.onnx.json
+
+# Certs / logs / IDE
+certs/
+*.log
+.vscode/
+.idea/

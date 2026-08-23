@@ -1,0 +1,11 @@
+gradio
+requests
+numpy
+psutil
+opencv-python
+ultralytics
+faster-whisper
+piper-tts
+edge-tts
+mediapipe
+pybind11
