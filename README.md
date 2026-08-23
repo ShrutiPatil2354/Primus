@@ -59,7 +59,7 @@ Gate       Memory + Executor    tabula-rasa prompt)
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/primus.git
+git clone https://github.com/dragonbuyareshi/primus.git
 cd primus
 ./setup.sh        # installs everything, builds C++ core, downloads voice
 ./run.sh          # starts Ollama + PRIMUS
@@ -105,12 +105,3 @@ src/metrics/      real-time system monitor
 src/ui/           handlers + glass theme
 cpp_core/         C++17 neural core (pybind11)
 ```
-
-## Roadmap
-
-- **Review 1 (Aug 2026):** unified multimodal agent, memory cortex, dashboard ✔
-- **Review 2 (Oct 2026):** Qwen2.5-VL demonstration learning, LoRA/DPO preference tuning, ChromaDB, real action execution, wake-word duplex speech.
-
-## License
-
-MIT — see `LICENSE`.
