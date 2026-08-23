@@ -67,16 +67,6 @@ cd primus
 
 Open **http://127.0.0.1:7860** (and **http://127.0.0.1:8000** for the raw live stream).
 
-## Team Access (remote try-out)
-
-The microphone needs a secure context. Team members should tunnel:
-
-```bash
-ssh -L 7860:localhost:7860 -L 8000:localhost:8000 user@server-ip
-```
-
-Then open **http://localhost:7860** on their machine — full mic + camera works.
-
 ## Model Stack (VRAM ≈ 6GB / 8GB)
 
 | Component | Model |
@@ -93,15 +83,3 @@ Then open **http://localhost:7860** on their machine — full mic + camera works
 2. Ask *"How to make tea?"* → **refused**.
 3. Teach `Learn make filter coffee: add filter; add coffee; pour hot water`.
 4. Ask *"How to make filter coffee?"* → answers **only your steps**.
-
-## Project Structure
-
-```text
-app.py            Gradio glass UI + wiring
-src/config.py     paths + model config
-src/core/         engine(C++), memory, llm, intent, executor, innate
-src/perception/   vision (live MJPEG), audio (STT/TTS)
-src/metrics/      real-time system monitor
-src/ui/           handlers + glass theme
-cpp_core/         C++17 neural core (pybind11)
-```
