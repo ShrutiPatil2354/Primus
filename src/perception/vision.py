@@ -1,5 +1,6 @@
 import threading
 import time
+import sys
 
 import numpy as np
 
@@ -28,7 +29,11 @@ class Vision:
             return True
         try:
             import cv2
-            self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+            # DirectShow is the most reliable low-latency backend on Windows;
+            # V4L2 is Linux-only.  Fall back to OpenCV's default backend when
+            # either explicit choice is unavailable.
+            backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_V4L2
+            self.cap = cv2.VideoCapture(0, backend)
             if not self.cap.isOpened():
                 self.cap = cv2.VideoCapture(0)
             if not self.cap.isOpened():

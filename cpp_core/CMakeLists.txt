@@ -33,3 +33,11 @@ pybind11_add_module(primus_core
 target_link_libraries(primus_core PRIVATE
     primus_cpp_core
 )
+
+# Place the Python extension where `import primus_core` can find it on both
+# Linux (.so) and Windows (.pyd).  This also avoids platform-specific copy
+# commands in the setup scripts.
+set_target_properties(primus_core PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
+)

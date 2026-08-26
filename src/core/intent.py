@@ -17,6 +17,12 @@ TASK_QUERY_KEYS = [
 
 def classify(text):
     t = (text or "").lower()
+    parts = [part.strip() for part in re.split(r"[\n!?]+", t) if part.strip()]
+    if len(parts) > 1:
+        request_kinds = {classify(part) for part in parts}
+        request_kinds.discard("conversation")
+        if len(request_kinds) > 1:
+            return "multiple"
     if any(k in t for k in SELF_KEYS):
         return "conversation"
     if any(k in t for k in TEACH_KEYS):

@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import time
 from collections import deque
@@ -6,7 +7,7 @@ from collections import deque
 import psutil
 
 from src.config import MODEL_NAME, START_TIME
-from src.core import llm, memory, executor
+from src.core import engine, llm, memory, executor
 from src.perception.vision import VISION
 
 CPU_H = deque([0] * 30, maxlen=30)
@@ -124,8 +125,8 @@ def header_html():
         <div style="color:#8b96ab;font-size:.78rem">Zero-Prior • Tabula Rasa • Learn from You</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        {chip("🖥", "OS", "Ubuntu 24.04")}
-        {chip("🟢", "GPU", "NVIDIA CUDA")}
+        {chip("🖥", "OS", f"{platform.system()} {platform.release()}")}
+        {chip("🟢", "GPU", gs['name'])}
         {chip("🧠", "LLM", MODEL_NAME)}
         {chip("⚙", "Runner", "Ollama")}
         {chip("⏱", "Uptime", uptime_str())}
@@ -152,7 +153,10 @@ def _kv(k, v, color="#e5e7eb"):
 def panels_html(m):
     st = memory.stats()
     ex = executor.stats()
-    loadavg = ", ".join(f"{x:.2f}" for x in os.getloadavg())
+    try:
+        loadavg = ", ".join(f"{x:.2f}" for x in os.getloadavg())
+    except (AttributeError, OSError):
+        loadavg = "Not available on Windows"
     return f'''
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <div style="flex:1;min-width:230px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
@@ -163,7 +167,7 @@ def panels_html(m):
         {_kv("Token/sec", llm.LAST['tokens_per_sec'])}
         {_kv("Confidence (Avg.)", st['avg_confidence'])}
         {_kv("Skills Stored", st['skills'])}
-        {_kv("Engine", "C++ Core")}
+        {_kv("Engine", engine.status())}
       </div>
       <div style="flex:1;min-width:230px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
         <div style="color:#e5e7eb;font-weight:700;font-size:.85rem;margin-bottom:6px">System Performance</div>
@@ -193,10 +197,13 @@ def hardware_html():
     ram_total = psutil.virtual_memory().total / 1024 ** 3
     disk_total = psutil.disk_usage("/").total / 1024 ** 3
     try:
+      if platform.system() == "Windows":
+        cpu_name = platform.processor() or platform.machine() or "CPU"
+      else:
         with open("/proc/cpuinfo") as f:
-            cpu_name = next(l.split(":")[1].strip() for l in f if "model name" in l)
-    except Exception:
-        cpu_name = "CPU"
+          cpu_name = next(l.split(":", 1)[1].strip() for l in f if "model name" in l)
+    except (OSError, StopIteration):
+      cpu_name = platform.machine() or "CPU"
     cell = lambda k, v, c="#e5e7eb": f'''
       <div style="flex:1;min-width:120px"><div style="color:#8b96ab;font-size:.68rem">{k}</div>
       <div style="color:{c};font-size:.8rem;font-weight:700">{v}</div></div>'''

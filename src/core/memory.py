@@ -4,10 +4,21 @@ import re
 import threading
 from datetime import datetime
 
-from src.config import MEMORY_BANK
 from src.core import engine
+from src.core.storage import STORE
 
 _lock = threading.Lock()
+
+# These words describe a request, not the skill being requested.  They must
+# never be enough to retrieve a procedure on their own (for example, both
+# "How to make tea?" and "How to make coffee?" contain "how", "to", and
+# "make").
+_MATCH_STOPWORDS = {
+    "a", "an", "and", "bake", "boil", "brew", "can", "chop", "clean",
+    "cook", "cut", "do", "for", "how", "i", "is", "make", "prepare",
+    "perform", "run", "start", "use", "wash", "water", "me", "of", "please", "procedure", "recipe", "steps", "the", "to",
+    "what", "with", "you",
+}
 
 
 def _empty():
@@ -21,21 +32,14 @@ def _empty():
 
 
 def load():
-    if not os.path.exists(MEMORY_BANK):
-        return _empty()
     try:
-        with open(MEMORY_BANK, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        base = _empty()
-        base.update(data)
-        return base
+        return STORE.snapshot()
     except Exception:
         return _empty()
 
 
 def _save(bank):
-    with open(MEMORY_BANK, "w", encoding="utf-8") as f:
-        json.dump(bank, f, indent=2, ensure_ascii=False)
+    STORE.replace_snapshot(bank)
 
 
 def _now():
@@ -57,7 +61,16 @@ def add_skill(name, steps, perception=""):
             "updated": _now(),
         }
         _save(b)
+        STORE.record_skill_version(sid, b["procedural"][sid])
         return sid, b["procedural"][sid]
+
+
+def update_skill(sid, name, steps):
+    return STORE.update_skill(sid, name.strip(), steps)
+
+
+def delete_skill(sid):
+    return STORE.delete_skill(sid)
 
 
 def find_skill(text):
@@ -65,16 +78,25 @@ def find_skill(text):
     skills = b["procedural"]
     if not skills:
         return None, None
-    query = set(re.findall(r"\w+", (text or "").lower()))
+    raw_text = (text or "").lower()
+    query = set(re.findall(r"\w+", raw_text))
+    meaningful_query = query - _MATCH_STOPWORDS
     best_id, best = None, 0
     for sid, s in skills.items():
-        blob = " ".join([sid, s.get("name", ""), " ".join(s.get("steps", []))]).lower()
-        score = len(query & set(re.findall(r"\w+", blob)))
-        if sid.replace("_", " ") in (text or "").lower():
+        # Only the skill's name identifies it.  Matching its step words can
+        # otherwise return an unrelated skill merely because both tasks use a
+        # common action such as "add" or "pour".
+        name_tokens = set(re.findall(r"\w+", f"{sid} {s.get('name', '')}".lower()))
+        meaningful_name = name_tokens - _MATCH_STOPWORDS
+        if not (meaningful_query & meaningful_name):
+            continue
+
+        score = len(meaningful_query & meaningful_name)
+        if sid.replace("_", " ") in raw_text:
             score += 3
         if score > best:
             best_id, best = sid, score
-    if best_id is None or best < 2:
+    if best_id is None:
         return None, None
     return best_id, skills[best_id]
 

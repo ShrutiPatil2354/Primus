@@ -9,3 +9,9 @@ piper-tts
 edge-tts
 mediapipe
 pybind11
+mujoco
+SQLAlchemy
+psycopg[binary]
+pgvector
+minio
+torch

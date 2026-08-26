@@ -52,6 +52,7 @@ def _run():
         log("Action", detail, "Success", score)
         memory.bump_episode()
     log("Learning", f"Task {CURRENT_TASK} completed", "Success", 0.92)
+    memory.STORE.record_feedback(CURRENT_TASK, "execution", 1.0, "All planned steps completed")
 
 
 def plan_html():

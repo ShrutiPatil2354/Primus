@@ -7,6 +7,7 @@ __pycache__/
 
 # Built C++ binaries
 *.so
+*.pyd
 cpp_core/build/
 
 # Data / memory / media (private)

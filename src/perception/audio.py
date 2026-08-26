@@ -40,6 +40,8 @@ def speak(text):
                 _voice = PiperVoice.load(VOICE_MODEL)
             with wave.open(AUDIO_OUT, "wb") as f:
                 _voice.synthesize(text[:400], f)
+            from src.core.artifacts import ARTIFACTS
+            ARTIFACTS.put_file(AUDIO_OUT, content_type="audio/wav")
             executor.log("Speech", "Voice reply generated (Piper)", "Success", 1.0)
             return AUDIO_OUT
         except Exception as e:
@@ -55,6 +57,8 @@ def speak(text):
             await comm.save(AUDIO_OUT_MP3)
 
         asyncio.run(_run())
+        from src.core.artifacts import ARTIFACTS
+        ARTIFACTS.put_file(AUDIO_OUT_MP3, content_type="audio/mpeg")
         executor.log("Speech", "Voice reply generated (edge-tts)", "Success", 1.0)
         return AUDIO_OUT_MP3
     except Exception as e:
