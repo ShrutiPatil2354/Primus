@@ -181,6 +181,7 @@ class PostgresMemoryStore:
             for table in ("skills", "episodes", "semantic_facts", "sensory_events", "working_memory", "robot_episodes", "skill_versions", "feedback_events", "semantic_documents"):
                 db.execute(text(f"DELETE FROM {table}"))
 
+
     def upsert_embedding(self, source_type, source_id, content, embedding):
         with self.engine.begin() as db:
             db.execute(text("INSERT INTO semantic_documents(source_type,source_id,content,embedding,created) VALUES (:source_type,:source_id,:content,CAST(:embedding AS vector),:created) ON CONFLICT (source_type,source_id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding"), {"source_type": source_type, "source_id": source_id, "content": content, "embedding": "[" + ",".join(str(value) for value in embedding) + "]", "created": datetime.now().isoformat()})

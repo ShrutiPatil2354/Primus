@@ -121,6 +121,14 @@ table thead th, .gr-dataframe thead th {
 .task-card div { display:flex; justify-content:space-between; gap:12px; color:#e5edf9; }
 .task-card span { color:#8ea2c0; font-size:.75rem; white-space:nowrap; }
 .task-card p { margin:5px 0 0; color:#aab9d1; font-size:.78rem; }
+.agent-review { background:#0b1424; border:1px solid #2d405e; border-radius:10px; padding:12px; max-height:440px; overflow:auto; }
+.review-summary { display:flex; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid #2d405e; color:#f8fbff; }
+.review-summary span { color:#93c5fd; font-size:.75rem; }
+.agent-review h3 { color:#f08a5d; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; margin:14px 0 7px; }
+.source-row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; color:#dce7f6; font-size:.75rem; border-bottom:1px solid rgba(45,64,94,.6); }
+.source-row span { color:#8ea2c0; white-space:nowrap; }
+.chunk-preview { padding:8px 0; color:#aab9d1; font-size:.72rem; line-height:1.45; border-bottom:1px solid rgba(45,64,94,.6); }
+.chunk-preview span { display:block; color:#93c5fd; font-size:.64rem; margin-bottom:3px; }
 .version-history { background:#0b1424; border:1px solid #2d405e; border-radius:10px; padding:10px 12px; color:#aab9d1; font-size:.78rem; line-height:1.7; }
 .version-history b { color:#e5edf9; display:block; margin-bottom:3px; }
 

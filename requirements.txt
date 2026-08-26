@@ -13,5 +13,4 @@ mujoco
 SQLAlchemy
 psycopg[binary]
 pgvector
-minio
 torch

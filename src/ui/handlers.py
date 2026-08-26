@@ -369,8 +369,6 @@ def snapshot_camera():
             import cv2
             from src.config import SNAPSHOT_FILE
             cv2.imwrite(SNAPSHOT_FILE, cv2.cvtColor(VISION.frame, cv2.COLOR_RGB2BGR))
-            from src.core.artifacts import ARTIFACTS
-            ARTIFACTS.put_file(SNAPSHOT_FILE, content_type="image/jpeg")
             executor.log("Perception", "Snapshot saved", "Success", 0.99)
         except Exception:
             pass
