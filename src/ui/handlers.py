@@ -206,7 +206,7 @@ def sidebar_agents_html(selected_agent_id=None):
     icons = ["💼", "⚖", "⚙", "👤", "👥", "📖", "📈", "🤖"]
     colors = ["#ec4899", "#a855f7", "#3b82f6", "#06b6d4", "#8b5cf6", "#f97316", "#10b981", "#64748b"]
     items = [
-        f'''<div class="agent-nav-item sidebar-agent-item{default_active}" >
+        f'''<div class="agent-nav-item sidebar-agent-item{default_active}" data-agent-id="default" style="cursor: pointer;">
           <span class="agent-avatar-icon globe">🌐</span>
           <div class="agent-nav-info">
             <div class="agent-nav-name">Default Memory (Shared)</div>
@@ -219,7 +219,7 @@ def sidebar_agents_html(selected_agent_id=None):
         stats = STORE.agent_stats(agent["id"])
         icon = icons[idx % len(icons)]
         color = colors[idx % len(colors)]
-        items.append(f'''<div class="agent-nav-item sidebar-agent-item{is_active}" >
+        items.append(f'''<div class="agent-nav-item sidebar-agent-item{is_active}" data-agent-id="{agent['id']}" style="cursor: pointer;">
           <span class="agent-avatar-icon" style="background:{color}22;color:{color};border:1px solid {color}44;">{icon}</span>
           <div class="agent-nav-info">
             <div class="agent-nav-name">{html.escape(agent["name"])}</div>

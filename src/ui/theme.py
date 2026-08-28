@@ -1886,4 +1886,10 @@ CSS += r"""
     background: #2563eb !important;
 }
 
+
+/* Hidden Trigger for Sidebar Clicks */
+.hidden-trigger {
+    display: none !important;
+}
+
 """

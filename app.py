@@ -191,6 +191,7 @@ with gr.Blocks(
                         allow_custom_value=False,
                         elem_classes=["sidebar-search-box"],
                     )
+                    sidebar_hidden_btn = gr.Button("hidden", elem_id="sidebar_hidden_btn", elem_classes=["hidden-trigger"])
 
                     sidebar_view = gr.HTML(
                         handlers.sidebar_agents_html(),
@@ -758,6 +759,14 @@ with gr.Blocks(
             sidebar_view,
         ],
     )
+    # Sidebar click event trigger
+    sidebar_hidden_btn.click(
+        lambda x: gr.update(value=x),
+        inputs=[agent_select], # dummy input
+        outputs=[agent_select],
+        js="(x) => { return window.__selected_sidebar_agent; }"
+    )
+
 
     # Select built agent
     existing_agent_select.change(
@@ -1144,3 +1153,19 @@ if __name__ == "__main__":
         share=False,
         inbrowser=True,
     )
+    # Inject sidebar JS on load
+    demo.load(None, None, None, js="""
+    function() {
+        document.addEventListener("click", function(e) {
+            let target = e.target.closest(".sidebar-agent-item");
+            if (target) {
+                let agentId = target.getAttribute("data-agent-id");
+                if(agentId === "default") agentId = "";
+                window.__selected_sidebar_agent = agentId;
+                let btn = document.querySelector("#sidebar_hidden_btn button") || document.querySelector("#sidebar_hidden_btn");
+                if (btn) btn.click();
+            }
+        });
+    }
+    """)
+
