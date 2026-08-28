@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRIMUS — Architecture Dashboard</title>
+<style>
+  :root{
+    --bg:#05080f; --card:#080f1b; --line:#1c3252; --line2:#24406b;
+    --ink:#e5e7eb; --muted:#8b96ab; --dim:#5b6b85;
+    --blue:#38bdf8; --green:#22c55e; --purple:#a855f7; --amber:#f59e0b; --red:#ef4444;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -5%, rgba(56,189,248,.10), transparent 60%),
+      radial-gradient(800px 500px at 0% 10%, rgba(168,85,247,.08), transparent 60%),
+      radial-gradient(700px 500px at 50% 110%, rgba(34,197,94,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height:1.55; padding:28px 18px 60px;
+  }
+  .wrap{max-width:1120px; margin:0 auto;}
+  code{font-family:Consolas,"Cascadia Code",Menlo,monospace; background:#0d1a2e; border:1px solid var(--line);
+       border-radius:6px; padding:1px 6px; font-size:.85em; color:#9fd6f7;}
+  .hero{border:1px solid var(--line); border-radius:18px; padding:30px 30px 24px;
+    background:linear-gradient(180deg, rgba(56,189,248,.08), rgba(8,15,27,.9) 55%);
+    box-shadow:0 20px 60px rgba(0,0,0,.45);}
+  .hero h1{font-size:clamp(1.9rem,4vw,2.9rem); letter-spacing:.12em; font-weight:800;
+    background:linear-gradient(90deg,var(--blue),var(--purple) 60%,var(--green));
+    -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hero .tag{color:var(--muted); margin-top:8px; max-width:860px; font-size:.98rem;}
+  .hero .tag b{color:var(--ink);}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px;}
+  .chip{font-size:.78rem; border:1px solid var(--line2); background:rgba(56,189,248,.06);
+    border-radius:999px; padding:5px 12px; white-space:nowrap;}
+  .chip b{color:var(--blue); font-weight:700;}
+  .hero .meta{margin-top:16px; color:var(--dim); font-size:.8rem;}
+  nav.toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 8px; position:sticky; top:8px; z-index:50;
+    background:rgba(5,8,15,.88); backdrop-filter:blur(10px); border:1px solid var(--line);
+    border-radius:12px; padding:10px;}
+  nav.toc a{color:var(--muted); text-decoration:none; font-size:.8rem; border:1px solid transparent; padding:4px 10px; border-radius:999px;}
+  nav.toc a:hover{color:var(--blue); border-color:var(--line2); background:rgba(56,189,248,.06);}
+  section{margin-top:34px;}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px;}
+  .sec-head .no{font-size:.72rem; color:var(--blue); border:1px solid var(--line2); border-radius:6px; padding:2px 8px; letter-spacing:.1em;}
+  h2{font-size:1.45rem; font-weight:800; letter-spacing:.02em;}
+  .sec-sub{color:var(--muted); font-size:.92rem; margin-bottom:16px; max-width:920px;}
+  h3{font-size:1.02rem; margin:0 0 10px; letter-spacing:.03em;}
+  h3 .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px;}
+  .grid{display:grid; gap:14px;}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .g5{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%), var(--card);
+    border:1px solid var(--line); border-radius:14px; padding:16px 18px;}
+  .card p{color:var(--muted); font-size:.88rem;}
+  .card p b, .card li b, td b{color:var(--ink);}
+  ul.clean{list-style:none;}
+  ul.clean li{padding:5px 0 5px 18px; position:relative; color:var(--muted); font-size:.88rem;}
+  ul.clean li::before{content:"▸"; position:absolute; left:2px; color:var(--blue);}
+  .why{margin-top:12px; border-left:3px solid var(--green); background:rgba(34,197,94,.06);
+    border-radius:0 10px 10px 0; padding:10px 12px; font-size:.84rem; color:#c7d2e2;}
+  .why b{color:var(--green); letter-spacing:.06em; font-size:.75rem;}
+  table{width:100%; border-collapse:collapse; font-size:.86rem;}
+  th{color:var(--blue); text-align:left; font-size:.74rem; letter-spacing:.1em; text-transform:uppercase;
+     padding:8px 10px; border-bottom:1px solid var(--line2);}
+  td{padding:9px 10px; border-bottom:1px solid rgba(28,50,82,.55); color:var(--muted); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .k{color:var(--ink); font-weight:600;}
+  .pill{display:inline-block; font-size:.7rem; padding:2px 9px; border-radius:999px; border:1px solid var(--line2); color:var(--muted);}
+  .pill.b{color:var(--blue); border-color:rgba(56,189,248,.5); background:rgba(56,189,248,.08);}
+  .pill.g{color:var(--green); border-color:rgba(34,197,94,.5); background:rgba(34,197,94,.08);}
+  .pill.p{color:var(--purple); border-color:rgba(168,85,247,.5); background:rgba(168,85,247,.08);}
+  .pill.a{color:var(--amber); border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.08);}
+  .pill.r{color:var(--red); border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.08);}
+  .steps{counter-reset:st; display:grid; gap:10px;}
+  .step{display:flex; gap:14px; align-items:flex-start; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:12px 16px;}
+  .step::before{counter-increment:st; content:counter(st,decimal-leading-zero); color:var(--blue);
+    font-weight:800; font-family:Consolas,monospace; font-size:1.05rem; border:1px solid var(--line2);
+    border-radius:10px; padding:6px 9px; background:rgba(56,189,248,.06);}
+  .step .t{font-size:.9rem;}
+  .step .t b{color:var(--ink);}
+  .step .t span{display:block; color:var(--muted); font-size:.84rem; margin-top:2px;}
+  .step .route{margin-left:auto; flex-shrink:0; align-self:center;}
+  .diagram-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; overflow-x:auto;}
+  svg text{font-family:"Segoe UI",Roboto,sans-serif;}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; font-size:.78rem; color:var(--muted);}
+  .legend i{display:inline-block; width:22px; height:3px; border-radius:2px; margin-right:6px; vertical-align:middle;}
+  footer{margin-top:44px; color:var(--dim); font-size:.78rem; text-align:center; border-top:1px solid var(--line); padding-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <h1>PRIMUS</h1>
+  <p class="tag"><b>Zero-Knowledge Real-Time Cognitive Agent</b> — a brain-inspired, <b>tabula rasa</b> AI that starts knowing <i>nothing</i> and learns only from its teacher, through text, speech, and live vision. This dashboard explains what is happening inside the repository: the tech stack, the memory cortex, retrieval, the learning loop, and <b>why every piece was chosen</b>.</p>
+  <div class="chips">
+    <span class="chip"><b>UI</b> Gradio 6 · :7860</span>
+    <span class="chip"><b>LLM</b> Ollama · Qwen2.5-7B-Instruct</span>
+    <span class="chip"><b>Memory</b> 5 cortices · SQLite → Postgres+pgvector</span>
+    <span class="chip"><b>Voice</b> Whisper STT · Piper TTS</span>
+    <span class="chip"><b>Vision</b> YOLOv8n + MediaPipe · :8000</span>
+    <span class="chip"><b>Neural core</b> C++17 · pybind11</span>
+    <span class="chip"><b>RL</b> Confidence + meta-RL (PyTorch)</span>
+    <span class="chip"><b>Telemetry</b> psutil + nvidia-smi · 1.5 s tick</span>
+  </div>
+  <p class="meta">Source: D:\Primus_Major\Primus — entry point <code>app.py</code> · docs kept in <code>ARCHITECTURE.md</code> / <code>README.md</code> · self-contained HTML (works offline).</p>
+</header>
+
+<!-- ================= TOC ================= -->
+<nav class="toc">
+  <a href="#overview">1 · Big picture</a>
+  <a href="#diagram">2 · Architecture diagram</a>
+  <a href="#lifecycle">3 · Request lifecycle</a>
+  <a href="#stack">4 · Tech stack &amp; why</a>
+  <a href="#memory">5 · Memory management</a>
+  <a href="#retrieval">6 · Retrieval</a>
+  <a href="#learning">7 · Learning &amp; RL</a>
+  <a href="#models">8 · Model stack &amp; VRAM</a>
+  <a href="#resilience">9 · Fallbacks &amp; resilience</a>
+  <a href="#decisions">10 · Design decisions</a>
+  <a href="#run">11 · Run &amp; configure</a>
+</nav>
+<!-- ================= 1. OVERVIEW ================= -->
+<section id="overview">
+  <div class="sec-head"><span class="no">SECTION 1</span><h2>Big picture — what is actually happening</h2></div>
+  <p class="sec-sub">PRIMUS is one Python process serving a web dashboard. Every message runs the same pipeline: <b>perceive → classify intent → retrieve from memory → answer or act → store what happened → speak</b>. Nothing is answered from pretrained world knowledge — the LLM is constrained to use <i>only</i> what the local memory cortex contains.</p>
+  <div class="grid g3">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>The agent loop</h3>
+      <p><code>app.py</code> builds the Gradio UI and binds every input (send button, Enter, mic stop, doc upload) to one function: <code>handlers.process_input()</code> — <b>9 inputs → 17 outputs</b>, so chat, voice player, task plan, action log, and dashboards can never drift apart. A <code>gr.Timer(1.5 s)</code> re-renders live panels continuously.</p>
+      <div class="why"><b>WHY</b> — one pipeline + one refresh loop = no divergent UI states. Heavy libraries (whisper, piper, torch, cv2) are imported lazily inside functions so startup stays fast.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>The zero-prior guarantee</h3>
+      <p>Task and fact questions are answered <b>only</b> from learned memory; unknown tasks are <b>refused</b> ("Teach me first"). The Knowledge Gate runs <i>before</i> the LLM, and the LLM gets a strict tabula-rasa system prompt so it may only rephrase taught knowledge. Wipe <code>data/primus_memory.db</code> → a true blank slate.</p>
+      <div class="why"><b>WHY</b> — this is the project's core claim: local, auditable knowledge instead of hidden pretrained guesses. Demos: "How to make tea?" → refused; teach it; ask again → answered from your steps only.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--purple)"></span>The layers (dependency rule)</h3>
+      <p><code>app.py → ui/handlers → core + perception + metrics</code>. Dependencies point one way only — nothing in <code>core/</code>, <code>perception/</code>, or <code>metrics/</code> imports from <code>ui/</code>. <code>src/training/</code> runs offline as its own process; <code>cpp_core/</code> is a compiled <code>primus_core.pyd</code> imported with a pure-Python fallback.</p>
+      <div class="why"><b>WHY</b> — one-way dependencies keep the brain testable without a UI, and the UI swappable without touching cognition.</div>
+    </div>
+  </div>
+</section>
+<!-- ================= 2. ARCHITECTURE DIAGRAM ================= -->
+<section id="diagram">
+  <div class="sec-head"><span class="no">SECTION 2</span><h2>Architecture diagram</h2></div>
+  <p class="sec-sub">Top-to-bottom flow of one message. Boxes are real files/modules; every arrow is a real call path in the code. Dashed frame = in-process memory; side rail = services that run beside or after the pipeline.</p>
+  <style>
+    .nb{fill:#0b1424; stroke:#24406b; stroke-width:1.2; rx:10;}
+    .nbB{fill:#0b1424; stroke:#38bdf8; stroke-width:1.2;}
+    .nbG{fill:#0b1424; stroke:#22c55e; stroke-width:1.2;}
+    .nbA{fill:#0b1424; stroke:#f59e0b; stroke-width:1.2;}
+    .nbP{fill:#0b1424; stroke:#a855f7; stroke-width:1.2;}
+    .frame{fill:rgba(34,197,94,.04); stroke:#22c55e; stroke-dasharray:5 4; stroke-width:1.2;}
+    .nt{fill:#e5e7eb; font-size:12.5px; font-weight:600;}
+    .ns{fill:#8b96ab; font-size:10.5px;}
+    .cap{fill:#5b6b85; font-size:10px; letter-spacing:1.6px; font-weight:700;}
+    .flow{stroke:#5b6b85; stroke-width:1.6; fill:none; marker-end:url(#arr);}
+    .flowB{stroke:#38bdf8; stroke-width:1.6; fill:none; marker-end:url(#arrB);}
+    .wlab{fill:#5b6b85; font-size:9.5px;}
+  </style>
+  <div class="diagram-card">
+  <svg viewBox="0 0 1040 1120" width="100%" style="min-width:860px">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#5b6b85"/></marker>
+      <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#38bdf8"/></marker>
+    </defs>
+
+    <!-- INPUT ROW -->
+    <text x="20" y="20" class="cap">INPUTS — SRC/PERCEPTION + COMPOSER</text>
+    <rect class="nb" x="20" y="28" width="232" height="64" rx="10"/>
+    <text x="34" y="53" class="nt">Text composer</text>
+    <text x="34" y="71" class="ns">typed message · Learn / Ask mode</text>
+    <rect class="nb" x="276" y="28" width="232" height="64" rx="10"/>
+    <text x="290" y="53" class="nt">Microphone</text>
+    <text x="290" y="71" class="ns">faster-whisper STT → text</text>
+    <rect class="nb" x="532" y="28" width="232" height="64" rx="10"/>
+    <text x="546" y="53" class="nt">Camera (live)</text>
+    <text x="546" y="71" class="ns">YOLOv8n · MediaPipe · MJPEG :8000</text>
+    <rect class="nb" x="788" y="28" width="232" height="64" rx="10"/>
+    <text x="802" y="53" class="nt">Document upload</text>
+    <text x="802" y="71" class="ns">pypdf · python-docx · txt/md/csv</text>
+    <path class="flow" d="M136,92 L136,132"/><path class="flow" d="M392,92 L392,132"/>
+    <path class="flow" d="M648,92 L648,132"/><path class="flow" d="M904,92 L904,132"/>
+
+    <!-- UI LAYER -->
+    <rect class="nbB" x="20" y="136" width="1000" height="74" rx="10"/>
+    <text x="36" y="163" class="nt">app.py — Gradio 6 Blocks UI · port 7860 (auto-increments if busy)</text>
+    <text x="36" y="183" class="ns">wires every event → handlers.process_input() · 9 inputs → 17 outputs (chat, voice players, task plan, action log, dashboards, sidebar)</text>
+    <text x="36" y="199" class="ns">gr.Timer(1.5 s) refreshes live panels · doc ingest into active agent · reset / agent-manager actions</text>
+    <path class="flow" d="M520,210 L520,242"/>
+
+    <!-- INTENT ROUTER -->
+    <rect class="nbA" x="310" y="246" width="420" height="58" rx="10"/>
+    <text x="326" y="270" class="nt">intent.classify() — Intent Router</text>
+    <text x="326" y="290" class="ns">teach · perform · task_query · conversation · multiple (mode override: Learn forces teach)</text>
+    <path class="flow" d="M520,304 L520,328"/>
+    <path class="flow" d="M520,328 L136,328 L136,348"/>
+    <path class="flow" d="M520,328 L392,328 L392,348"/>
+    <path class="flow" d="M520,328 L648,328 L648,348"/>
+    <path class="flow" d="M520,328 L904,328 L904,348"/>
+
+    <!-- INTENT PATHS -->
+    <rect class="nbG" x="20" y="352" width="232" height="170" rx="10"/>
+    <text x="34" y="376" class="nt">① TEACH → encode</text>
+    <text x="34" y="398" class="ns">parse “Learn X: a; b; c” (regex)</text>
+    <text x="34" y="414" class="ns">voice/camera → LLM JSON extraction</text>
+    <text x="34" y="430" class="ns">→ memory.add_skill() conf 0.5</text>
+    <text x="34" y="446" class="ns">→ episode “teach” + feedback</text>
+    <text x="34" y="462" class="ns">→ skill_versions row (v1)</text>
+    <text x="34" y="482" class="ns" fill="#22c55e">write path — nothing asked, stored</text>
+
+    <rect class="nb" x="276" y="352" width="232" height="170" rx="10"/>
+    <text x="290" y="376" class="nt">② PERFORM → execute</text>
+    <text x="290" y="398" class="ns">retrieve skill from procedural</text>
+    <text x="290" y="414" class="ns">executor.start_plan() in thread</text>
+    <text x="290" y="430" class="ns">step loop: pending → running</text>
+    <text x="290" y="446" class="ns">→ success + random 0.85–0.97</text>
+    <text x="290" y="462" class="ns">feedback “execution” reward 1.0</text>
+    <text x="290" y="482" class="ns" fill="#38bdf8">live Task Plan HTML + action log</text>
+
+    <rect class="nbA" x="532" y="352" width="232" height="170" rx="10"/>
+    <text x="546" y="376" class="nt">③ TASK QUERY → gate</text>
+    <text x="546" y="398" class="ns">Knowledge Gate (before LLM!)</text>
+    <text x="546" y="414" class="ns">find_skill() token match</text>
+    <text x="546" y="430" class="ns">else find_agent_document()</text>
+    <text x="546" y="446" class="ns">hit → answer from memory only</text>
+    <text x="546" y="462" class="ns">miss → REFUSED + episode</text>
+    <text x="546" y="478" class="ns">“rejected” + feedback 0.0</text>
+    <text x="546" y="498" class="ns" fill="#f59e0b">zero-prior enforcement point</text>
+
+    <rect class="nbP" x="788" y="352" width="232" height="170" rx="10"/>
+    <text x="802" y="376" class="nt">④ CONVERSATION → LLM</text>
+    <text x="802" y="398" class="ns">strict zero-prior system prompt</text>
+    <text x="802" y="414" class="ns">+ memory.summary() injected</text>
+    <text x="802" y="430" class="ns">+ last 12 chat messages</text>
+    <text x="802" y="446" class="ns">→ llm.chat() Ollama qwen2.5:7b</text>
+    <text x="802" y="462" class="ns">temp 0.3 · ctx 4096</text>
+    <text x="802" y="478" class="ns">offline → innate.reply() fallback</text>
+    <text x="802" y="498" class="ns" fill="#a855f7">may only rephrase taught facts</text>
+
+    <path class="flow" d="M136,522 L136,544"/><path class="flow" d="M392,522 L392,544"/>
+    <path class="flow" d="M648,522 L648,544"/><path class="flow" d="M904,522 L904,544"/>
+
+    <!-- MEMORY CORTEX -->
+    <rect class="frame" x="8" y="548" width="1024" height="152" rx="12"/>
+    <text x="24" y="568" class="cap">MEMORY CORTEX — SRC/CORE/MEMORY.PY (THREAD-SAFE · STORE SINGLETON)</text>
+    <rect class="nbG" x="20" y="582" width="184" height="100" rx="10"/>
+    <text x="32" y="607" class="nt">Procedural</text>
+    <text x="32" y="626" class="ns">skills: steps + confidence</text>
+    <text x="32" y="643" class="ns">skill_versions on edit</text>
+    <text x="32" y="660" class="ns">token-match retrieval</text>
+    <rect class="nbG" x="224" y="582" width="184" height="100" rx="10"/>
+    <text x="236" y="607" class="nt">Episodic</text>
+    <text x="236" y="626" class="ns">timestamped events</text>
+    <text x="236" y="643" class="ns">taught · recall · perform</text>
+    <text x="236" y="660" class="ns">rejected · edit (200/2k cap)</text>
+    <rect class="nbG" x="428" y="582" width="184" height="100" rx="10"/>
+    <text x="440" y="607" class="nt">Semantic</text>
+    <text x="440" y="626" class="ns">facts: user_name, prefers</text>
+    <text x="440" y="643" class="ns">regex-extracted</text>
+    <text x="440" y="660" class="ns">key → value + time</text>
+    <rect class="nbG" x="632" y="582" width="184" height="100" rx="10"/>
+    <text x="644" y="607" class="nt">Sensory</text>
+    <text x="644" y="626" class="ns">last camera / audio</text>
+    <text x="644" y="643" class="ns">summaries</text>
+    <text x="644" y="660" class="ns">cap 20 view · 200 rows</text>
+    <rect class="nbG" x="836" y="582" width="184" height="100" rx="10"/>
+    <text x="848" y="607" class="nt">Working</text>
+    <text x="848" y="626" class="ns">current intent · skill</text>
+    <text x="848" y="643" class="ns">live perception context</text>
+    <text x="848" y="660" class="ns">rewritten every turn</text>
+    <path class="flow" d="M520,700 L520,732"/>
+
+    <!-- STORAGE -->
+    <rect class="nbB" x="20" y="736" width="1000" height="74" rx="10"/>
+    <text x="36" y="763" class="nt">Durable storage — src/core/storage.py · STORE singleton (RLock)</text>
+    <text x="36" y="783" class="ns">SQLite data/primus_memory.db (default, zero-config) — schema mirrors Postgres; one-time JSON→SQLite migration on first run</text>
+    <text x="36" y="799" class="ns">DATABASE_URL set → PostgreSQL + pgvector (docker :5432) · MinIO (:9000) receives voice replies &amp; snapshots when configured</text>
+    <path class="flow" d="M136,810 L136,842"/><path class="flow" d="M392,810 L392,842"/>
+    <path class="flow" d="M648,810 L648,842"/><path class="flow" d="M904,810 L904,842"/>
+
+    <!-- SIDE SERVICES -->
+    <rect class="nb" x="20" y="846" width="232" height="96" rx="10"/>
+    <text x="34" y="870" class="nt">C++ neural core</text>
+    <text x="34" y="890" class="ns">engine.update_confidence()</text>
+    <text x="34" y="906" class="ns">old + 0.15·(reward − old) → [0,1]</text>
+    <text x="34" y="922" class="ns">pybind11 .pyd · Python fallback</text>
+    <rect class="nb" x="276" y="846" width="232" height="96" rx="10"/>
+    <text x="290" y="870" class="nt">Feedback events</text>
+    <text x="290" y="890" class="ns">teach · recall · perform</text>
+    <text x="290" y="906" class="ns">unknown · edit · execution</text>
+    <text x="290" y="922" class="ns">reward stream → training</text>
+    <rect class="nb" x="532" y="846" width="232" height="96" rx="10"/>
+    <text x="546" y="870" class="nt">Metrics monitor</text>
+    <text x="546" y="890" class="ns">psutil CPU / RAM / disk / net</text>
+    <text x="546" y="906" class="ns">nvidia-smi GPU / VRAM / temp</text>
+    <text x="546" y="922" class="ns">SVG sparklines (30 samples)</text>
+    <rect class="nb" x="788" y="846" width="232" height="96" rx="10"/>
+    <text x="802" y="870" class="nt">Meta-RL trainer (offline)</text>
+    <text x="802" y="890" class="ns">python -m src.training.meta_rl</text>
+    <text x="802" y="906" class="ns">policy 32→64→5 (PyTorch)</text>
+    <text x="802" y="922" class="ns">data/knowledge_meta_policy.pt</text>
+    <path class="flow" d="M136,942 L136,974"/><path class="flow" d="M392,942 L392,974"/>
+    <path class="flow" d="M648,942 L648,974"/><path class="flow" d="M904,942 L904,974"/>
+
+    <!-- OUTPUTS -->
+    <rect class="nbB" x="20" y="978" width="1000" height="74" rx="10"/>
+    <text x="36" y="1005" class="nt">Reply → 17-value output tuple → Gradio components</text>
+    <text x="36" y="1025" class="ns">voice reply: Piper offline (.onnx) → edge-tts fallback · unique filename per reply · keep newest 10 in data/voice_replies/</text>
+    <text x="36" y="1041" class="ns">task plan HTML · action log (cap 40) · memory / learning tables · telemetry panels · TTS failure never blocks the text reply</text>
+    <path class="flowB" d="M1010,1015 L1028,1015 L1028,173 L1016,173"/>
+    <text x="700" y="1108" class="wlab">⟲ right rail: gr.Timer(1.5 s) re-renders every live panel from current memory / telemetry state</text>
+  </svg>
+  </div>
+  <div class="legend">
+    <span><i style="background:#5b6b85"></i>request path</span>
+    <span><i style="background:#38bdf8"></i>UI / storage layer</span>
+    <span><i style="background:#22c55e"></i>learning write path</span>
+    <span><i style="background:#f59e0b"></i>zero-prior gating</span>
+    <span><i style="background:#a855f7"></i>LLM path</span>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — everything the agent "is" lives in the memory cortex and one database file, so the agent can be wiped, copied, exported (JSONL) or moved to Postgres without touching code. The LLM is a replaceable language module on the side — the <i>identity</i> is the memory, not the model.</div>
+</section>
+<!-- ================= 3. LIFECYCLE ================= -->
+<section id="lifecycle">
+  <div class="sec-head"><span class="no">SECTION 3</span><h2>Request lifecycle — one message, end to end</h2></div>
+  <p class="sec-sub">Exactly what happens between pressing <b>Send</b> and seeing the answer, mapped 1:1 to <code>src/ui/handlers.py → process_input()</code>.</p>
+  <div class="steps">
+    <div class="step"><div class="t"><b>Capture</b> — text, audio file, camera context flag, doc file and UI state arrive as 9 function inputs.<span>Empty input short-circuits: nothing is processed, UI just re-renders.</span></div><span class="route pill b">handlers.process_input()</span></div>
+    <div class="step"><div class="t"><b>Hear</b> — if audio is attached, faster-whisper transcribes it (small/CUDA-int8 → base/CPU fallback); transcript joins the text and is stored in sensory memory.<span>Model is loaded once and cached in a module global.</span></div><span class="route pill b">audio.transcribe()</span></div>
+    <div class="step"><div class="t"><b>See</b> — if camera context is enabled, the live YOLOv8n label summary ("Objects perceived: cup, laptop…") is appended and saved to sensory memory.<span>The camera loop itself runs in a daemon thread, not in the request.</span></div><span class="route pill b">VISION.summary()</span></div>
+    <div class="step"><div class="t"><b>Ingest</b> — an attached document is parsed (pypdf / python-docx / plain text), trimmed to 20 000 chars and stored as private knowledge of the active agent.<span>PDFs/docx that yield no text produce a warning notice, never a crash.</span></div><span class="route pill g">STORE.add_agent_document()</span></div>
+    <div class="step"><div class="t"><b>Classify</b> — the intent router keyword-matches the message into <i>teach / perform / task_query / conversation</i>; multi-sentence requests with mixed intents become <i>multiple</i> and ask for clarification. The composer mode (Learn/Ask) can force or demote intents.<span>Facts like "my name is…" are regex-extracted into semantic memory here.</span></div><span class="route pill a">intent.classify()</span></div>
+    <div class="step"><div class="t"><b>Route</b> — one of four paths runs: <b>teach</b> parses &amp; stores a procedure, <b>perform</b> retrieves and executes it in a background thread, <b>task_query</b> walks the Knowledge Gate, <b>conversation</b> prompts the LLM with injected memory.<span>Learn Mode forces teach; Ask Mode demotes teach phrases to queries.</span></div><span class="route pill b">if/elif chain</span></div>
+    <div class="step"><div class="t"><b>Enforce zero-prior</b> — task/fact lookups consult procedural memory first, then the agent's documents; a miss stores a <i>rejected</i> episode + 0.0 feedback and returns a refusal — the LLM is never allowed to guess task knowledge.<span>Doc hits are answered strictly from an excerpt (temp 0.0 prompt).</span></div><span class="route pill a">memory.find_skill() / gate</span></div>
+    <div class="step"><div class="t"><b>Remember</b> — working memory is updated (last intent, skill, perception), an episode records what happened, and every teach/recall/perform/unknown event appends a feedback row with its reward.<span>This feedback log is the future training set.</span></div><span class="route pill g">memory.set_working() + STORE.record_feedback()</span></div>
+    <div class="step"><div class="t"><b>Speak</b> — if voice reply is enabled, Piper synthesizes a unique <code>voice_reply_&lt;ms&gt;.wav</code>; if Piper is missing/silent, edge-tts runs in its own thread with a 30 s timeout. Only the newest 10 voice files are kept.<span>A TTS failure is logged and skipped — text always wins.</span></div><span class="route pill b">audio.speak()</span></div>
+    <div class="step"><div class="t"><b>Render</b> — a 17-value tuple (chatbot state ×2, message table, action log, learning log, memory tables, task plan HTML, dashboards, voice players ×2, doc state, sidebar) updates the UI; end-to-end latency lands in <code>llm.LAST</code>.<span>gr.Timer keeps panels fresh between messages.</span></div><span class="route pill b">17-tuple → app.py</span></div>
+  </div>
+</section>
+<!-- ================= 4. TECH STACK ================= -->
+<section id="stack">
+  <div class="sec-head"><span class="no">SECTION 4</span><h2>Tech stack — what, and why exactly that</h2></div>
+  <p class="sec-sub">Every dependency in <code>requirements.txt</code> earns its place. The pattern across the whole stack: <b>local-first, offline-capable, graceful fallback</b>.</p>
+  <div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th style="width:15%">Concern</th><th style="width:24%">Technology</th><th style="width:28%">What it does here</th><th>Why this choice</th></tr></thead>
+    <tbody>
+    <tr><td class="k">UI / server</td><td><b>Gradio 6.x</b> <code>gr.Blocks</code></td><td>Dashboard, chat composer, audio players, tables, HTML panels; wires every event to <code>process_input()</code></td><td>Pure-Python reactive UI — no JS build chain. Built-in audio players/dataframes/HTML give the glass-dashboard look for free; <code>fill_width</code> + custom CSS tokens keep styling in one file (<code>ui/theme.py</code>).</td></tr>
+    <tr><td class="k">LLM brain</td><td><b>Ollama</b> · Qwen2.5-7B-Instruct</td><td>Conversation, doc-Q&amp;A rephrasing, teach-JSON extraction — always under strict zero-prior prompts</td><td>Local + private + free; a 7B fits 8 GB VRAM beside Whisper/YOLO. Plain HTTP <code>/api/chat</code> via <code>requests</code> (180 s timeout, temp 0.3, ctx 4096); <code>/api/tags</code> doubles as a 1 s health probe → offline falls back to <code>innate.py</code>.</td></tr>
+    <tr><td class="k">Speech in</td><td><b>faster-whisper</b> small int8 (CUDA) → base (CPU)</td><td>Microphone recordings → text, joined into the message</td><td>Offline, 4× faster than openai-whisper at same accuracy; <code>int8</code> halves VRAM; VAD filter + beam 1 cut latency; automatic CPU downgrade keeps voice working on any machine.</td></tr>
+    <tr><td class="k">Speech out</td><td><b>Piper</b> (.onnx, offline) → <b>edge-tts</b> fallback</td><td>Every reply can be spoken; each reply gets a unique <code>voice_reply_&lt;ms&gt;</code> file; newest 10 kept</td><td>Piper = fully offline neural voice; edge-tts (own thread + 30 s timeout, safe inside Gradio) rescues machines without the voice model. Unique filenames force the browser to autoplay fresh audio instead of replaying a cached URL; 0-byte outputs are rejected.</td></tr>
+    <tr><td class="k">Vision</td><td><b>OpenCV</b> + <b>YOLOv8n</b> + <b>MediaPipe Hands</b></td><td>Daemon-thread camera loop @640×480; object labels + confidence feed chat context; MJPEG stream on :8000</td><td>YOLOv8n is the smallest real-time detector (half-precision on CUDA); inference every <i>3rd</i> frame and hands every <i>10th</i> keep FPS high. DirectShow/V4L2 backends chosen for lowest latency per OS; a tiny ThreadingHTTPServer serves the raw stream without extra deps.</td></tr>
+    <tr><td class="k">Neural core</td><td><b>C++17</b> + pybind11 (CMake → <code>primus_core.pyd</code>)</td><td><code>update_confidence()</code> — the synaptic learning rule applied on every feedback event</td><td>A real compiled-native anchor for future heavy math (activations, similarity). pybind11 gives a zero-overhead Python call; <code>engine.py</code> silently falls back to the identical Python formula when the build is missing, so tests never break on machines without MSVC/g++.</td></tr>
+    <tr><td class="k">Persistence</td><td><b>SQLite</b> (sqlite3) → <b>PostgreSQL + pgvector</b> (SQLAlchemy, psycopg) + <b>MinIO</b></td><td>All five cortices, versions, feedback, robot episodes, agents, documents; one <code>STORE</code> singleton chosen at boot by <code>DATABASE_URL</code></td><td>SQLite = zero-config local dev that still survives restarts; its schema deliberately mirrors the Postgres DDL, so scaling up is a URL change — no API rewrite. pgvector is pre-wired (<code>vector(384)</code>, cosine <code>&lt;=&gt;</code>) for embedding retrieval later; MinIO gives cheap object storage for voice/snapshots.</td></tr>
+    <tr><td class="k">Telemetry</td><td><b>psutil</b> + <b>nvidia-smi</b> (subprocess)</td><td>CPU/RAM/disk/net + GPU util/VRAM/temp/power → 30-sample ring buffers → SVG sparklines; AI KPIs (tokens/s, latency)</td><td>No GPU vendor lock-in: <code>nvidia-smi</code> is parsed with a 2 s timeout and degrades to zeros. Server-side ring buffers mean the 1.5 s <code>gr.Timer</code> just re-renders strings — cheap, no chart library needed.</td></tr>
+    <tr><td class="k">Docs</td><td><b>pypdf</b> · <b>python-docx</b> + plain text formats</td><td>Upload → extract text → store as agent-private knowledge (20 000-char cap)</td><td>Two small parsers cover the files teachers actually use; everything else (txt/md/csv/json/py/html/xml) is read directly. Cap keeps prompts inside the 4096-token window.</td></tr>
+    <tr><td class="k">Concurrency</td><td><b>threading</b> (locks, daemon threads) — no job queue</td><td>Camera loop, MJPEG server, task executor, edge-tts worker, memory writes</td><td>The workload is I/O-ish and single-user; daemons + RLocks are simpler than Celery/Redis. Every store write is lock-guarded so Gradio event threads never corrupt the bank; executor steps animate via the shared <code>PLAN</code> list.</td></tr>
+    <tr><td class="k">Learning</td><td><b>PyTorch</b> (offline meta-RL)</td><td><code>src/training/meta_rl.py</code> trains a small knowledge-selection policy from stored feedback; exports episodes as JSONL</td><td>Training is deliberately out-of-process: the dashboard never blocks on gradient steps. Policy is tiny (32→64→5) and refuses to train before ≥2 taught tasks have ≥2 feedback episodes — preserving the zero-prior claim.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="why"><b>WHY LOCAL-FIRST EVERYWHERE</b> — the LLM, STT, TTS, vision and memory all run on your machine. No data leaves the network (edge-tts is the only optional online fallback), nothing is logged to a cloud, and every capability degrades gracefully instead of erroring: no Ollama → innate replies; no GPU → CPU whisper; no Piper → edge-tts; no Postgres → SQLite. The dashboard is always usable.</div>
+</section>
+<!-- ================= 5. MEMORY ================= -->
+<section id="memory">
+  <div class="sec-head"><span class="no">SECTION 5</span><h2>Memory management — the five cortices</h2></div>
+  <p class="sec-sub"><code>src/core/memory.py</code> is the agent-facing API; <code>src/core/storage.py</code> is the durable store behind it (one <code>STORE</code> singleton, RLock-guarded, SQLite → Postgres). The split mirrors the brain: fast, structured access on top; durable, bounded storage underneath.</p>
+  <div class="grid g5">
+    <div class="card"><h3><span class="dot" style="background:var(--green)"></span>Procedural</h3><p><b>How-to knowledge.</b> Skills: <code>id, name, steps[], confidence, perception, timestamps</code>. Born at confidence 0.5; every edit appends an immutable <code>skill_versions</code> row (v1, v2…). Retrieval = name-token match.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--green)"></span>Episodic</h3><p><b>The diary.</b> Timestamped events: taught, recall, perform, rejected, edit, delete, clarification, conversation, example. Newest-first; shown 30 in the UI, kept 2 000 in the DB.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--green)"></span>Semantic</h3><p><b>Facts about the world/teacher.</b> Regex extraction of “my name is…”, “I like/love/prefer…”, “remember that…” into key→value rows (<code>user_name</code>, <code>user_prefers</code>, <code>fact</code>). Same key overwrites.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--green)"></span>Sensory</h3><p><b>The last things seen/heard.</b> Camera summaries and audio transcripts (120-char slices). Rolling window: 20 shown, 200 kept. Gives the LLM ambient context without video frames.</p></div>
+    <div class="card"><h3><span class="dot" style="background:var(--green)"></span>Working</h3><p><b>Current consciousness.</b> Key-value scratchpad rewritten every turn: <code>last_intent</code>, <code>last_skill</code>, <code>last_perception</code>, updated timestamp. Exactly what “I am thinking about right now” means.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>How a write flows (example: teaching)</h3>
+      <ul class="clean">
+        <li><code>handlers</code> parses “Learn X: a; b; c” → <code>memory.add_skill(name, steps)</code></li>
+        <li><code>_lock</code> acquired → load snapshot → upsert skill (keeps existing confidence) → <b>version row appended</b></li>
+        <li><code>STORE.record_feedback(sid, "learned", 0.5, …)</code> — the reward log starts here</li>
+        <li><code>memory.add_episode("teach", …)</code> — the diary entry, trimmed to 200</li>
+        <li>UI tables refresh via the 17-tuple and the 1.5 s timer</li>
+      </ul>
+      <div class="why"><b>WHY SNAPSHOTS?</b> — <code>snapshot()/replace_snapshot()</code> mirror the legacy <code>memory_bank.json</code> shape, so old code (and the one-time JSON→SQLite migration) keeps working while new tables evolve underneath.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--purple)"></span>Multi-agent isolation</h3>
+      <p>Custom agents get <b>private</b> cortex tables: <code>agents</code>, <code>agent_skills</code>, <code>agent_documents</code>, <code>agent_feedback</code> keyed by <code>(agent_id, id)</code>. The Default Memory remains shared. A document taught to one agent is invisible to others — enforced at retrieval, not by prompt.</p>
+      <ul class="clean">
+        <li>Teach/ask/feedback paths pick the table set by whether an agent is active</li>
+        <li>Deleting an agent cascades: skills → documents → feedback</li>
+        <li>Reset (“clear learning data”) truncates cortex tables but keeps schema &amp; settings</li>
+      </ul>
+      <div class="why"><b>WHY ISOLATION?</b> — a tutor bot and a cooking bot must never leak knowledge into each other; DB-level partitioning is stronger than any prompt instruction.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px; overflow-x:auto">
+  <table>
+    <thead><tr><th>Cortex / store</th><th>Table</th><th>Bound</th><th>Why the bound</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Procedural</td><td><code>skills</code> + <code>skill_versions</code></td><td>unlimited · versioned</td><td>The asset itself — never auto-deleted; versions give audit + rollback.</td></tr>
+      <tr><td class="k">Episodic</td><td><code>episodes</code></td><td>2 000 rows (200 in view)</td><td>A diary needs recency, not infinity; bound keeps prompts and UI cheap.</td></tr>
+      <tr><td class="k">Semantic</td><td><code>semantic_facts</code></td><td>key-overwrite</td><td>Facts are current-state, not history — “user_name” has one truth.</td></tr>
+      <tr><td class="k">Sensory</td><td><code>sensory_events</code></td><td>200 rows (20 in view)</td><td>Perception is only useful for a few turns; older frames are noise.</td></tr>
+      <tr><td class="k">Working</td><td><code>working_memory</code></td><td>one row per key</td><td>By definition the present turn only.</td></tr>
+      <tr><td class="k">Feedback / robot episodes</td><td><code>feedback_events</code> / <code>robot_episodes</code></td><td>unbounded</td><td>Training data — size is the point; exported as JSONL for offline RL.</td></tr>
+      <tr><td class="k">Voice files</td><td><code>data/voice_replies/</code></td><td>newest 10 files</td><td>Prevents disk creep from per-reply audio while keeping the player history warm.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+<!-- ================= 6. RETRIEVAL ================= -->
+<section id="retrieval">
+  <div class="sec-head"><span class="no">SECTION 6</span><h2>Retrieval — how the right memory is found</h2></div>
+  <p class="sec-sub">Retrieval always runs <b>before</b> the LLM and decides whether the LLM even gets a chance. Three stages, in order: route the intent → match a procedure → score the documents. A vector path (pgvector) is pre-wired for later.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>Stage 1 · Intent routing</h3>
+      <p>Ordered keyword tables in <code>intent.py</code>: self-keys → teach-keys → task-query-keys → perform-keys → fallback <i>conversation</i>. The message is split on <code>!? \n</code>; mixed intents become <i>multiple</i> (asks you to send one at a time). Composer mode can force <i>teach</i> (Learn) or demote it (Ask).</p>
+      <div class="why"><b>WHY KEYWORDS, NOT AN LLM?</b> — routing must be instant, deterministic and free; an LLM router would add latency and could misroute the very gate that guarantees zero-prior.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>Stage 2 · Procedural match — <code>find_skill()</code></h3>
+      <p>① tokenize the query (<code>\w+</code>, lowercased) → ② subtract the stopword set (“how, to, make, cook…” — request words that can’t identify a task) → ③ for each skill, intersect with <b>name-only</b> tokens → ④ score = |overlap|, <b>+3</b> if the skill id appears verbatim → ⑤ best score wins, else <code>None</code>.</p>
+      <div class="why"><b>WHY NAME-ONLY + STOPWORDS?</b> — matching step words once returned the wrong recipe because two tasks share verbs like “add” or “pour”. Stopwords stop “how to make tea” matching “coffee”; name-only matching stops step-word collisions. Deterministic and auditable beats clever.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>Stage 3 · Document scoring</h3>
+      <p>For the active agent: query tokens (len&gt;2) are counted in each stored document’s name+content; best count wins. An <b>excerpt</b> is built around the hits and sent as the <i>only</i> allowed source to the LLM (temperature 0.0, system rule: “if the excerpt lacks the answer, reply with the fallback phrase — do not guess”).</p>
+      <div class="why"><b>WHY EXCERPTS?</b> — keeps the prompt inside the 4096-token window and makes the answer verifiable against a stored slice instead of the whole file.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>Vector retrieval — pre-wired, not yet driving</h3>
+      <p>The Postgres backend already creates <code>semantic_documents(content, embedding vector(384))</code> with <code>upsert_embedding()</code> and cosine nearest-neighbour search (<code>1 − embedding &lt;=&gt; query</code>). SQLite has no vector index, so today keyword scoring drives retrieval; the STORE interface is identical, so embeddings can be switched on without touching handlers.</p>
+      <div class="why"><b>WHY WAIT?</b> — the corpus is small and teacher-curated; exact matching is more predictable than embeddings, costs no VRAM and works offline. The pgvector column is the migration path once knowledge grows.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3><span class="dot" style="background:var(--purple)"></span>What the LLM actually receives (conversation path)</h3>
+    <ul class="clean">
+      <li><b>System prompt:</b> strict tabula-rasa rules — never answer medical/factual/how-to questions from pretraining; must reply with a taught fallback phrase otherwise; may freely discuss its own state.</li>
+      <li><b>Injected knowledge:</b> <code>memory.summary()</code> / <code>STORE.agent_summary()</code> — every skill as <code>[SKILL id] step → step</code>, every fact as <code>[FACT] key: value</code>, agent domain + rules, plus document previews (1 000 chars each).</li>
+      <li><b>History:</b> the last 12 chat messages; <b>perception:</b> current camera labels when enabled.</li>
+    </ul>
+    <div class="why"><b>WHY THIS SHAPE?</b> — the model is treated as a language renderer for stored knowledge, not a knowledge source. Refusals are therefore reliable: if the memory summary doesn’t contain it, the prompt forbids inventing it.</div>
+  </div>
+</section>
+<!-- ================= 7. LEARNING ================= -->
+<section id="learning">
+  <div class="sec-head"><span class="no">SECTION 7</span><h2>Learning &amp; RL — two timescales, one data source</h2></div>
+  <p class="sec-sub">Every teach/recall/perform/unknown event writes a <b>reward</b> into <code>feedback_events</code>. Two learners consume that stream: an instant confidence rule (in C++) and an offline meta-RL trainer.</p>
+  <div class="grid g3">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>① Synaptic confidence — online</h3>
+      <p><code>new = old + 0.15 · (reward − old)</code>, clamped to [0,1] — an exponential moving average toward observed reward. Runs inside <code>primus_core.pyd</code> (C++17/pybind11); <code>engine.py</code> falls back to the byte-identical Python formula if the build is absent.</p>
+      <ul class="clean">
+        <li>learned / taught → reward 0.5 (neutral start)</li>
+        <li>recall, perform, execution → 1.0</li>
+        <li>unknown / rejected → 0.0</li>
+      </ul>
+      <div class="why"><b>WHY EMA?</b> — one float per skill, smooth, bounded, interpretable in the UI; no gradients in the request path.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>② Meta-RL policy — offline</h3>
+      <p><code>python -m src.training.meta_rl</code> trains a 32→64→5 MLP (teach/recall/perform/revise/unknown) over stored feedback. Context = 32-dim hashed bag-of-words of skill name + steps. Per-task adaptation on half the episodes, evaluated on the held-out half; meta-update pulls base weights 10% toward the adapted ones. Checkpoint: <code>data/knowledge_meta_policy.pt</code> (<code>--resume</code> supported).</p>
+      <div class="why"><b>WHY REFUSE TO TRAIN EARLY?</b> — it requires ≥2 tasks × ≥2 episodes for a held-out split; without that gate it would memorize noise and quietly break the zero-prior story.</div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>③ Robot-episode data path</h3>
+      <p>The safe tabletop sandbox records <code>robot_episodes(task, actions_json, reward, success)</code>; <code>evaluation.export_jsonl()</code> dumps them to <code>data/robot_training.jsonl</code> for offline evaluation or future policy training. Robot trajectories are deliberately <b>excluded</b> from the knowledge meta-RL domain (<code>task_knowledge</code>).</p>
+      <div class="why"><b>WHY SIMULATION ONLY?</b> — it creates state-action-reward data with zero hardware risk; real actuators are a later phase.</div>
+    </div>
+  </div>
+  <div class="why" style="margin-top:14px"><b>WHY TWO TIMESCALES?</b> — the confidence rule gives immediate, visible adaptation per event; meta-RL needs batches and runs as its own process on the same feedback log. One recorded stream feeds both, so nothing is labeled twice and the dashboard never blocks on training.</div>
+</section>
+<!-- ================= 8. MODELS ================= -->
+<section id="models">
+  <div class="sec-head"><span class="no">SECTION 8</span><h2>Model stack — sharing one GPU</h2></div>
+  <p class="sec-sub">Five models co-exist on a single ~8 GB GPU. They are sized <b>inversely to duty cycle</b>: the biggest model is mostly idle; the tiniest ones run continuously.</p>
+  <div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th style="width:18%">Role</th><th style="width:30%">Model</th><th style="width:22%">Precision / device</th><th>Duty cycle &amp; note</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Reasoning</td><td><b>Qwen2.5-7B-Instruct</b> (Ollama)</td><td>quantized, CUDA — the big slice</td><td>idle between messages; ctx 4096; temp 0.3 (0.0 for doc answers, 0.1 for teach-JSON)</td></tr>
+      <tr><td class="k">Speech-to-text</td><td><b>faster-whisper small</b> → base</td><td>int8 CUDA → CPU fallback</td><td>per voice note only; VAD filter, beam 1</td></tr>
+      <tr><td class="k">Text-to-speech</td><td><b>Piper en_US-lessac-medium</b></td><td>.onnx, CPU only</td><td>per reply (&lt;400 chars); zero VRAM cost</td></tr>
+      <tr><td class="k">Object vision</td><td><b>YOLOv8n</b></td><td>half (fp16) on CUDA</td><td>every 3rd frame of a 30 fps loop; ~tiny weights file</td></tr>
+      <tr><td class="k">Hand tracking</td><td><b>MediaPipe Hands</b></td><td>CPU</td><td>every 10th frame, max 2 hands</td></tr>
+      <tr><td class="k">Meta-RL policy</td><td><b>KnowledgePolicy MLP</b> 32→64→5</td><td>CPU, offline process</td><td>trains only when invoked; checkpoint on disk</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="why"><b>WHY THIS BUDGET?</b> — Qwen + Whisper + YOLO together target ≈6 GB, leaving headroom for activations; the UI still works when any model is absent (see below). Duty-cycle sizing keeps FPS high without a second GPU.</div>
+</section>
+
+<!-- ================= 9. RESILIENCE ================= -->
+<section id="resilience">
+  <div class="sec-head"><span class="no">SECTION 9</span><h2>Fallbacks — what happens when a part is missing</h2></div>
+  <p class="sec-sub">Every capability degrades instead of erroring; the action log records <i>why</i>, so the UI always explains its own state.</p>
+  <div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th style="width:30%">If this is missing / fails</th><th style="width:44%">Then the system does this</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Ollama not running</td><td><code>innate.py</code> rule-based replies; teaching, memory, dashboards keep working</td><td><code>llm.online()</code> 1 s probe → <code>handlers</code></td></tr>
+      <tr><td class="k">CUDA unavailable</td><td>Whisper silently reloads as <b>base</b> on CPU</td><td><code>audio.transcribe()</code></td></tr>
+      <tr><td class="k">Piper missing or 0-byte wav</td><td>edge-tts in its own thread + event loop, 30 s timeout</td><td><code>audio.speak()</code></td></tr>
+      <tr><td class="k">All TTS fails</td><td>text reply is unaffected; error row in action log</td><td>try/except around <code>speak()</code></td></tr>
+      <tr><td class="k">Postgres unreachable</td><td>boot continues on SQLite; reason printed</td><td><code>_create_store()</code></td></tr>
+      <tr><td class="k">Camera missing / YOLO load fails</td><td>status “OFF (reason)”; empty labels; app otherwise normal</td><td><code>Vision.start()</code></td></tr>
+      <tr><td class="k">C++ module not built</td><td>identical Python confidence formula used; status shows “Python Fallback Engine”</td><td><code>engine.py</code></td></tr>
+      <tr><td class="k">Port 7860 busy</td><td>auto-scans the next free port (up to +50)</td><td><code>_get_free_port()</code></td></tr>
+      <tr><td class="k">Unreadable document</td><td>warning notice, nothing stored, no crash</td><td><code>_read_document_text()</code></td></tr>
+      <tr><td class="k">Mixed intents in one message</td><td>asks you to send one request at a time (nothing half-executed)</td><td>intent <i>multiple</i></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="why"><b>WHY SO MANY LADDERS?</b> — a teacher-facing agent must never die mid-lesson. Each ladder is one try/except or one probe, cheap to maintain, and every step down is logged so the dashboard stays honest about its own state.</div>
+</section>
+<!-- ================= 10. DECISIONS ================= -->
+<section id="decisions">
+  <div class="sec-head"><span class="no">SECTION 10</span><h2>Design decisions — every “why” in one list</h2></div>
+  <div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th style="width:34%">Decision</th><th>Why it is the right call here</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Knowledge Gate runs before the LLM</td><td>Refusals become provable — the model is a language renderer for stored memory, never a knowledge source. This is the whole tabula-rasa claim, enforced in code.</td></tr>
+      <tr><td class="k">One pipeline: 9 inputs → 17 outputs</td><td>Send button, Enter, mic, and doc upload share one handler, so chat, plan, log and dashboards can never disagree.</td></tr>
+      <tr><td class="k">SQLite-first, Postgres-shaped schema</td><td>Zero setup today; setting <code>DATABASE_URL</code> scales tomorrow — same tables, same <code>STORE</code> API, no rewrite.</td></tr>
+      <tr><td class="k">Keyword retrieval, pgvector pre-wired</td><td>Deterministic, auditable, offline, no extra VRAM; the <code>vector(384)</code> column is the ready migration path when the corpus outgrows scoring.</td></tr>
+      <tr><td class="k">Stopwords + name-only skill match</td><td>“How to make tea” must never recall “coffee”; shared step-verbs must never decide a match. Bugs observed in practice, fixed at the matching layer.</td></tr>
+      <tr><td class="k">Confidence EMA implemented in C++</td><td>Instant, interpretable adaptation per event plus a genuine native core (pybind11) — with a Python twin so any machine can run it.</td></tr>
+      <tr><td class="k">One feedback stream → two learners</td><td>The online rule adapts per event; offline meta-RL consumes the same rows. Nothing labeled twice, dashboard never trains.</td></tr>
+      <tr><td class="k">Unique voice filenames + keep-newest-10</td><td>Browsers autoplay fresh audio instead of replaying a cached URL; disk can’t creep.</td></tr>
+      <tr><td class="k">Lazy imports of whisper/piper/torch/cv2</td><td>Startup stays seconds-fast and optional hardware stays optional.</td></tr>
+      <tr><td class="k">One-way layer deps (ui → core)</td><td>The brain is testable headless; the UI is replaceable; nothing reaches back up.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ================= 11. RUN ================= -->
+<section id="run">
+  <div class="sec-head"><span class="no">SECTION 11</span><h2>Run &amp; configure</h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>Quick start (Windows PowerShell)</h3>
+      <ul class="clean">
+        <li><code>cd D:\Primus_Major\Primus</code></li>
+        <li><code>./setup.ps1</code> — venv + deps + C++ build + Piper voice + Ollama model</li>
+        <li><code>./run.ps1</code> — starts the web app (and Ollama)</li>
+        <li>Dashboard → <b>http://127.0.0.1:7860</b> · raw camera stream → <b>:8000</b></li>
+        <li>Optional scale-up: <code>docker compose up -d</code> (Postgres+pgvector :5432, MinIO :9000) then set <code>DATABASE_URL</code> in <code>.env</code></li>
+        <li>Offline training: <code>python -m src.training.meta_rl</code> (needs ≥2 taught tasks × ≥2 feedback events)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--purple)"></span>Runtime knobs (<code>src/config.py</code> + <code>.env</code>)</h3>
+      <ul class="clean">
+        <li><code>PRIMUS_MODEL_NAME</code> — Ollama chat model (default <code>qwen2.5:7b-instruct</code>)</li>
+        <li><code>PRIMUS_CONTEXT_LENGTH</code> — 4096 token window</li>
+        <li><code>OLLAMA_BASE_URL</code> — http://127.0.0.1:11434</li>
+        <li><code>PORT</code> / <code>GRADIO_SERVER_PORT</code> — 7860 (auto-increments if busy)</li>
+        <li><code>PRIMUS_STREAM_PORT</code> — 8000 (MJPEG)</li>
+        <li><code>PRIMUS_DB_PATH</code> — SQLite file location · <code>DATABASE_URL</code> — switches to Postgres</li>
+      </ul>
+      <div class="why"><b>BLANK SLATE DEMO</b> — delete <code>data/primus_memory.db</code> and restart: the agent truly knows nothing until you teach it.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3><span class="dot" style="background:var(--green)"></span>Where everything lives on disk (<code>data/</code>, gitignored)</h3>
+    <ul class="clean">
+      <li><code>primus_memory.db</code> — all five cortices + versions, feedback, robot episodes, agents, documents</li>
+      <li><code>memory_bank.json</code> — legacy format; auto-migrated into SQLite on first run</li>
+      <li><code>voice_replies/</code> — per-reply audio, newest 10 kept · <code>en_US-lessac-medium.onnx</code> — Piper voice</li>
+      <li><code>knowledge_meta_policy.pt</code> — meta-RL checkpoint · <code>robot_training.jsonl</code> — exported episodes · <code>snapshot.jpg</code> — camera snapshot</li>
+    </ul>
+  </div>
+</section>
+
+<footer>PRIMUS Architecture Dashboard · generated from source inspection of <code>app.py</code>, <code>src/</code> and <code>cpp_core/</code> — consistent with <code>ARCHITECTURE.md</code> · keep both updated when layers change · self-contained HTML, open offline in any browser.</footer>
+
+
+
+</div>
+
+<style>
+/* ============ PRINT / PDF THEME (light, ink-friendly) ============ */
+@media print{
+  @page{ size:A4; margin:12mm; }
+  html,body{ background:#fff !important; color:#0f172a !important; padding:0; }
+  body{ font-size:10.5pt; line-height:1.45; }
+  nav.toc{ display:none !important; }
+  .hero{ background:#f1f5f9 !important; border:1px solid #cbd5e1 !important; box-shadow:none !important; }
+  .hero h1{ color:#0f172a !important; -webkit-text-fill-color:#0f172a !important; background:none !important; }
+  .hero .tag{ color:#334155 !important; } .hero .tag b{ color:#0f172a !important; }
+  .hero .meta{ color:#64748b !important; }
+  .chip{ background:#fff !important; border-color:#cbd5e1 !important; color:#0f172a !important; }
+  .chip b{ color:#0369a1 !important; }
+  .sec-head .no{ color:#0369a1 !important; border-color:#cbd5e1 !important; }
+  h2{ color:#0f172a !important; break-after:avoid; }
+  h3{ color:#0f172a !important; }
+  .sec-sub, .card p, td, li, .step .t span{ color:#334155 !important; }
+  .t b, .k, .card p b{ color:#0f172a !important; }
+  .card, .diagram-card, .step{ background:#fff !important; border-color:#cbd5e1 !important;
+    box-shadow:none !important; break-inside:avoid; }
+  .grid{ gap:10px; }
+  code{ background:#f1f5f9 !important; border-color:#e2e8f0 !important; color:#0f172a !important; }
+  table{ font-size:8.6pt; }
+  th{ color:#0369a1 !important; border-bottom-color:#94a3b8 !important; }
+  td{ border-bottom-color:#e2e8f0 !important; }
+  tr{ break-inside:avoid; }
+  .why{ background:#f0fdf4 !important; border-left:3px solid #16a34a !important; color:#14532d !important; }
+  .why b{ color:#15803d !important; }
+  .pill{ background:#fff !important; color:#334155 !important; border-color:#cbd5e1 !important; }
+  .step::before{ color:#0369a1 !important; background:#f1f5f9 !important; border-color:#cbd5e1 !important; }
+  .diagram-card{ overflow:visible !important; }
+  svg{ min-width:0 !important; height:auto !important; }
+  .nb,.nbB,.nbG,.nbA,.nbP{ fill:#fff !important; }
+  .nb{ stroke:#64748b !important; } .nbB{ stroke:#0369a1 !important; }
+  .nbG{ stroke:#15803d !important; } .nbA{ stroke:#b45309 !important; }
+  .nbP{ stroke:#7e22ce !important; }
+  .frame{ fill:#f8fafc !important; stroke:#15803d !important; }
+  .nt{ fill:#0f172a !important; } .ns{ fill:#475569 !important; }
+  .cap, .wlab{ fill:#64748b !important; }
+  .flow{ stroke:#64748b !important; } .flowB{ stroke:#0369a1 !important; }
+  .legend{ color:#334155 !important; }
+  footer{ color:#64748b !important; border-top-color:#cbd5e1 !important; }
+  a{ color:#0369a1 !important; }
+  section{ margin-top:18px; }
+}
+</style>
+
+</body>
+</html>
