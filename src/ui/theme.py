@@ -1776,4 +1776,114 @@ CSS += r"""
 .inspector-col {
     min-height: 0 !important;
 }
+
+/* Minimal Audio Input Button */
+.compact-audio-input {
+    min-width: 46px !important;
+    max-width: 46px !important;
+    height: 46px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+.compact-audio-input > div, .compact-audio-input .wrap {
+    border: none !important;
+    background: transparent !important;
+}
+.compact-audio-input button {
+    min-width: 46px !important;
+    height: 46px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    background: #0f1c30 !important;
+    border: 1px solid #182a46 !important;
+}
+.compact-audio-input button:hover {
+    background: #142540 !important;
+    border-color: #38bdf8 !important;
+}
+.compact-audio-input label > span:first-child,
+.compact-audio-input [data-testid="waveform"],
+.compact-audio-input .audio-container,
+.compact-audio-input .clear-button {
+    display: none !important;
+}
+
+
+/* ChatGPT-like Pill Input Bar */
+.input-action-row {
+    background: #0b1424 !important;
+    border: 1px solid #344765 !important;
+    border-radius: 26px !important;
+    padding: 6px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+.input-action-row > div {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.chatgpt-textbox textarea {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    min-height: 40px !important;
+    padding: 10px 0 !important;
+}
+
+.compact-upload-btn {
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 1.2rem !important;
+    color: #aab9d1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.compact-upload-btn:hover {
+    background: rgba(255,255,255,0.05) !important;
+    color: #fff !important;
+}
+
+.compact-audio-input button {
+    background: transparent !important;
+    border: none !important;
+    color: #aab9d1 !important;
+    font-size: 1.2rem !important;
+}
+.compact-audio-input button:hover {
+    background: rgba(255,255,255,0.05) !important;
+    color: #fff !important;
+}
+
+.chatgpt-send-btn {
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: #3b82f6 !important;
+    border: none !important;
+    color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.2rem !important;
+}
+.chatgpt-send-btn:hover {
+    background: #2563eb !important;
+}
+
 """

@@ -257,13 +257,13 @@ with gr.Blocks(
                             equal_height=True,
                             elem_classes=["input-action-row"],
                         ):
-                            doc_upload_box = gr.File(
-                                label="➕ File",
+                            doc_upload_box = gr.UploadButton(
+                                "+",
                                 file_count="single",
-                                visible=False,
-                                scale=1,
                                 type="filepath",
-                                elem_classes=["compact-file-input"],
+                                elem_classes=["compact-upload-btn"],
+                                scale=0,
+                                min_width=46,
                             )
 
                             msg = gr.Textbox(
@@ -278,12 +278,21 @@ with gr.Blocks(
                                 autofocus=True,
                             )
 
+
+                            audio_in = gr.Audio(
+                                sources=["microphone"],
+                                type="filepath",
+                                show_label=False,
+                                elem_classes=["compact-audio-input"],
+                                scale=0,
+                                min_width=50,
+                            )
                             send_btn = gr.Button(
-                                "🚀 Send",
+                                "\u2191",
                                 variant="primary",
                                 elem_classes=["chatgpt-send-btn"],
                                 scale=0,
-                                min_width=105,
+                                min_width=40,
                             )
 
                         with gr.Row(elem_classes=["composer-bottom-row"]):
@@ -664,11 +673,7 @@ with gr.Blocks(
                     camera_notice = gr.HTML()
 
                 with gr.Column(scale=2):
-                    audio_in = gr.Audio(
-                        sources=["microphone", "upload"],
-                        type="filepath",
-                        label="Voice input",
-                    )
+                    
                     voice_out = gr.Audio(
                         label="Latest voice reply",
                         interactive=False,
@@ -912,6 +917,21 @@ with gr.Blocks(
         outputs=OUTPUTS,
     )
 
+
+    doc_upload_box.upload(
+        handlers.process_input,
+        inputs=[
+            msg,
+            audio_in,
+            chat_state,
+            msg_state,
+            agent_select,
+            use_camera_context,
+            chat_mode,
+            doc_upload_box,
+        ],
+        outputs=OUTPUTS,
+    )
 
     audio_in.stop_recording(
         handlers.process_input,

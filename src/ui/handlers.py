@@ -729,16 +729,27 @@ def toggle_chat_mode(mode):
     if "learn" in (mode or "").lower():
         return (
             gr.update(visible=True, value=None),
-            gr.update(placeholder="🎓 Learn Mode: Type 'Learn <task>: step 1; step 2' or attach document below with ➕"),
+            gr.update(placeholder="?? Learn Mode: Type instructions or upload a document..."),
         )
     else:
         return (
-            gr.update(visible=False, value=None),
-            gr.update(placeholder="💬 Ask Mode: Ask anything based ONLY on what you have taught this active agent..."),
+            gr.update(visible=True, value=None),
+            gr.update(placeholder="Ask anything..."),
         )
 
 
 def process_input(text, audio_path, history, messages, agent_id=None, use_camera_context=False, chat_mode="🎓 Learn Mode", doc_file=None):
+    import random
+    fallback_phrases = [
+        "I don't have prior knowledge about this, I would love to learn about that.",
+        "I don't have knowledge about that, please teach me.",
+        "This is not currently in my knowledge base, could you teach me?",
+        "I don't know the answer to that yet. I'm ready to learn if you can teach me!",
+        "I haven't acquired knowledge about this yet. Please feel free to add it to my memory.",
+        "I don't have any record of this information. Would you like to teach me?"
+    ]
+    chosen_fallback = random.choice(fallback_phrases)
+
     t0 = time.time()
     history = history or []
     messages = messages or []
@@ -795,6 +806,14 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
     messages = messages + [[_t(), "You", user_content[:160]]]
 
     kind = intent.classify(text) if text else "conversation"
+
+    # Override intent based on explicitly selected UI mode
+    if "learn" in chat_mode.lower():
+        if kind == "task_query" or kind == "conversation":
+            kind = "teach"
+    elif "ask" in chat_mode.lower():
+        if kind == "teach":
+            kind = "task_query"
     reply = ""
     sid = None
 
@@ -857,7 +876,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             learn_log("Skill Encoded", sid, skill["confidence"])
             executor.log("Learning", f"Encoded skill {sid} ({len(steps)} steps)", "Success", 0.9)
             LEARNING.update(active=True, task=name, skill=sid, examples=0, progress=0.0)
-            reply = (f"Skill '{name}' learned and stored strictly in '{agent_name}' procedural memory.\n"
+            reply = (f"Thanks for the information! Skill \'{name}\' learned and stored strictly in '{agent_name}' procedural memory.\n"
                      + "\n".join(f"{i + 1}. {s}" for i, s in enumerate(steps)))
             if doc_notice:
                 reply = f"{doc_notice}\n\n{reply}"
@@ -968,7 +987,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     llm.LAST["latency_ms"] = int((time.time() - t0) * 1000)
 
-    voice = audio.speak(reply)
+    voice = audio.speak(reply) if audio_path else None
 
     return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
             memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
