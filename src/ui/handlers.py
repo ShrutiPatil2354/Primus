@@ -738,7 +738,7 @@ def toggle_chat_mode(mode):
         )
 
 
-def process_input(text, audio_path, history, messages, agent_id=None, use_camera_context=False, chat_mode="🎓 Learn Mode", doc_file=None):
+def process_input(text, audio_path, history, messages, agent_id=None, use_camera_context=False, chat_mode="Ask Mode", doc_file=None, use_audio_output=True):
     import random
     fallback_phrases = [
         "I don't have prior knowledge about this, I would love to learn about that.",
@@ -792,7 +792,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
     if not text and not perception and not doc_notice:
         return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
                 memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
-                task_library_html(agent_id), agent_knowledge_html(agent_id), None, "", None, sidebar_agents_html(agent_id))
+                task_library_html(agent_id), agent_knowledge_html(agent_id), None, None, "", None, sidebar_agents_html(agent_id))
 
     user_content = text
     if doc_file:
@@ -987,17 +987,23 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     llm.LAST["latency_ms"] = int((time.time() - t0) * 1000)
 
-    voice = audio.speak(reply)
+    voice = None
+    if use_audio_output:
+        try:
+            voice = audio.speak(reply)
+        except Exception as exc:
+            executor.log("Speech", f"Voice reply failed: {exc}", "Error", None)
+            voice = None
 
     return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
             memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
-            task_library_html(agent_id), agent_knowledge_html(agent_id), voice, "", None, sidebar_agents_html(agent_id))
+            task_library_html(agent_id), agent_knowledge_html(agent_id), voice, voice, "", None, sidebar_agents_html(agent_id))
 
 
 def clear_session(agent_id=None):
     return ([], [], message_table_html([]), [], executor_table_html([]), learning_table_html([]), memory_table_html([]), "", "", "",
             task_library_html(agent_id), agent_knowledge_html(agent_id),
-            None, "", None, sidebar_agents_html(agent_id))
+            None, None, "", None, sidebar_agents_html(agent_id))
 
 
 

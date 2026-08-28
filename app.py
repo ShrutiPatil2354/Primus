@@ -246,12 +246,19 @@ with gr.Blocks(
                                 label="Use camera context",
                                 value=False,
                                 interactive=True,
-                                elem_classes=["camera-context-toggle"],
                             )
+
+                            use_audio_output = gr.Checkbox(
+                                label="Enable Voice Reply",
+                                value=True,
+                                interactive=True,
+                            )
+
                             composer_hint = gr.HTML(
                                 '<span class="composer-hint">'
                                 'Ask about something PRIMUS already knows...'
-                                '</span>'
+                                '</span>',
+                                elem_classes=["composer-hint-wrapper"]
                             )
 
                         with gr.Row(
@@ -294,6 +301,14 @@ with gr.Blocks(
                                 elem_classes=["chatgpt-send-btn"],
                                 scale=0,
                                 min_width=40,
+                            )
+
+                        with gr.Row(elem_classes=["voice-reply-row"]):
+                            voice_out_chat = gr.Audio(
+                                show_label=False,
+                                interactive=False,
+                                autoplay=True,
+                                elem_classes=["voice-reply-player"],
                             )
 
                         with gr.Row(elem_classes=["composer-bottom-row"]):
@@ -720,6 +735,7 @@ with gr.Blocks(
         task_library,
         agent_knowledge,
         voice_out,
+        voice_out_chat,
         msg,
         doc_upload_box,
         sidebar_view,
@@ -922,6 +938,7 @@ with gr.Blocks(
             use_camera_context,
             chat_mode,
             doc_upload_box,
+            use_audio_output,
         ],
         outputs=OUTPUTS,
     )
@@ -937,6 +954,7 @@ with gr.Blocks(
             use_camera_context,
             chat_mode,
             doc_upload_box,
+            use_audio_output,
         ],
         outputs=OUTPUTS,
     )
@@ -953,6 +971,7 @@ with gr.Blocks(
             use_camera_context,
             chat_mode,
             doc_upload_box,
+            use_audio_output,
         ],
         outputs=OUTPUTS,
     )
@@ -968,6 +987,7 @@ with gr.Blocks(
             use_camera_context,
             chat_mode,
             doc_upload_box,
+            use_audio_output,
         ],
         outputs=OUTPUTS,
     )
@@ -983,6 +1003,7 @@ with gr.Blocks(
             use_camera_context,
             chat_mode,
             doc_upload_box,
+            use_audio_output,
         ],
         outputs=OUTPUTS,
     )

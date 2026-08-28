@@ -23,6 +23,11 @@ SNAPSHOT_FILE = os.path.join(DATA_DIR, "snapshot.jpg")
 AUDIO_OUT = os.path.join(DATA_DIR, "primus_voice.wav")
 AUDIO_OUT_MP3 = os.path.join(DATA_DIR, "primus_voice.mp3")
 VOICE_MODEL = os.path.join(DATA_DIR, "en_US-lessac-medium.onnx")
+VOICE_MODEL = os.path.join(DATA_DIR, "en_US-lessac-medium.onnx")
+
+# Per-reply generated voice files (unique name each reply so the player refreshes)
+AUDIO_OUT_DIR = os.path.join(DATA_DIR, "voice_replies")
+os.makedirs(AUDIO_OUT_DIR, exist_ok=True)
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 OLLAMA_CHAT_URL = os.getenv("OLLAMA_CHAT_URL", f"{OLLAMA_BASE_URL}/api/chat")

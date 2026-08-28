@@ -132,7 +132,7 @@ select:focus-visible,
     color: inherit;
 }}
 
-.gradio-container input,
+.gradio-container input:not([type="checkbox"]):not([type="radio"]),
 .gradio-container textarea,
 .gradio-container select {{
     background: {BG_2} !important;
@@ -572,6 +572,10 @@ select:focus-visible,
 }}
 
 .camera-context-toggle {{
+    min-width: 0 !important;
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
     flex: 0 0 auto !important;
 }}
 
@@ -910,10 +914,10 @@ select:focus-visible,
     background: {BG_3} !important;
 }}
 
-.dark-dataframe input,
-.memory-table input,
-.gradio-dataframe input,
-[data-testid="dataframe"] input {{
+.dark-dataframe input:not([type="checkbox"]),
+.memory-table input:not([type="checkbox"]),
+.gradio-dataframe input:not([type="checkbox"]),
+[data-testid="dataframe"] input:not([type="checkbox"]) {{
     background: {BG_2} !important;
     color: {TEXT_PRIMARY} !important;
     border-color: {BORDER} !important;
@@ -1898,6 +1902,61 @@ CSS += r"""
 
 /* Hidden Trigger for Sidebar Clicks */
 .hidden-trigger {
+    display: none !important;
+}
+
+
+.composer-hint-wrapper {{
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    flex: 1 1 auto !important;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-width: 0 !important;
+}}
+.composer-top-row {{
+    flex-wrap: nowrap !important;
+}}
+
+
+/* Ensure checkboxes are fully visible and clickable */
+.gradio-container input[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+    background: transparent !important;
+    border: 1px solid #94a3b8 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+}
+.gradio-container input[type="checkbox"]:checked {
+    accent-color: #3b82f6 !important;
+}
+label:has(input[type="checkbox"]) {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+/* Voice reply player (composer) */
+.voice-reply-row {
+    margin-top: 6px !important;
+    gap: 8px !important;
+}
+.voice-reply-player {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.voice-reply-player [data-testid="waveform"] {
     display: none !important;
 }
 
