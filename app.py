@@ -280,7 +280,7 @@ with gr.Blocks(
                             )
 
 
-                            audio_in = gr.Audio(
+                            audio_in = gr.Audio(visible=False,
                                 sources=["microphone"],
                                 type="filepath",
                                 show_label=False,
@@ -760,12 +760,27 @@ with gr.Blocks(
         ],
     )
     # Sidebar click event trigger
+    def _handle_sidebar_click(js_val):
+        updates = handlers.select_agent(js_val)
+        return (js_val,) + updates
+
     sidebar_hidden_btn.click(
-        lambda x: gr.update(value=x),
-        inputs=[agent_select], # dummy input
-        outputs=[agent_select],
-        js="(x) => { return window.__selected_sidebar_agent; }"
+        _handle_sidebar_click,
+        inputs=[agent_select],
+        outputs=[
+            agent_select,
+            agent_overview,
+            agent_knowledge,
+            task_library,
+            task_select,
+            existing_agent_select,
+            agent_manager_view,
+            doc_select,
+            sidebar_view,
+        ],
+        js="(x) => [window.__selected_sidebar_agent]"
     )
+
 
 
     # Select built agent

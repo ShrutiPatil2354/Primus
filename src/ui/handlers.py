@@ -987,7 +987,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     llm.LAST["latency_ms"] = int((time.time() - t0) * 1000)
 
-    voice = audio.speak(reply) if audio_path else None
+    voice = audio.speak(reply)
 
     return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
             memory_table_html(), executor.plan_html(), learning_html(), memory_html(),

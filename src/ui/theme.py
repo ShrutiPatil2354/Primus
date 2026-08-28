@@ -1808,7 +1808,6 @@ CSS += r"""
 }
 .compact-audio-input label > span:first-child,
 .compact-audio-input [data-testid="waveform"],
-.compact-audio-input .audio-container,
 .compact-audio-input .clear-button {
     display: none !important;
 }
@@ -1863,7 +1862,17 @@ CSS += r"""
     border: none !important;
     color: #aab9d1 !important;
     font-size: 1.2rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
 }
+.compact-audio-input {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
 .compact-audio-input button:hover {
     background: rgba(255,255,255,0.05) !important;
     color: #fff !important;
