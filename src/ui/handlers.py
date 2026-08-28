@@ -386,7 +386,7 @@ def delete_agent_custom(agent_id):
             sidebar_agents_html(""))
 
 
-def _document_excerpt(document, query, limit=3000):
+def _document_excerpt(document, query, limit=12000):
     content = " ".join((document.get("content") or "").split())
     if len(content) <= limit:
         return content
@@ -813,8 +813,38 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     # TEACH
     elif kind == "teach":
-        name, steps = intent.parse_teach(text or perception)
+        name = ""
+        steps = []
+        if (":" in text or ";" in text or "\n" in text) and not perception:
+            name, steps = intent.parse_teach(text)
+        else:
+            if llm.online():
+                teach_prompt = (
+                    "You are an AI task extraction engine. The user is teaching a procedure using natural voice and/or visual camera context.\n"
+                    "Extract the concise task name and break down the procedure into a sequence of discrete, actionable steps.\n"
+                    "If the voice command is vague like 'Teach this', use the Camera Context to infer the task name and steps based on what is visible.\n"
+                    "Return ONLY valid JSON in this exact format, with no markdown or extra text:\n"
+                    '{"name": "task name", "steps": ["step 1", "step 2"]}'
+                )
+                teach_input = f"Voice Command: {text}\nCamera Context: {perception}"
+                resp = llm.chat([
+                    {"role": "system", "content": teach_prompt},
+                    {"role": "user", "content": teach_input}
+                ], temperature=0.1)
+                import json
+                try:
+                    cleaned = resp.strip().strip("").removeprefix("json").strip()
+                    data = json.loads(cleaned)
+                    name = data.get("name", "")
+                    steps = data.get("steps", [])
+                except Exception as e:
+                    executor.log("Learning", f"LLM parsing failed: {e}", "Warning", 0)
+                    name, steps = intent.parse_teach(text or perception)
+            else:
+                name, steps = intent.parse_teach(text or perception)
+
         if not name:
+
             name = f"task_{int(time.time())}"
         if steps:
             if agent:
@@ -886,7 +916,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
                         f"You are a strict tabula-rasa agent named '{agent_name}'. "
                         "You MUST NOT use any pre-training knowledge. "
                         "Answer ONLY using the facts explicitly stated in the Document Excerpt below. "
-                        "If the Excerpt does not contain the exact answer to the user's question, you MUST reply exactly with: 'This agent was not taught that yet.' Do NOT guess, infer, or provide outside information.\n\n"
+                        f"If the Excerpt does not contain the exact answer to the user's question, you MUST reply exactly with: '{chosen_fallback}' Do NOT guess, infer, or provide outside information.\n\n"
                         f"Document: {document['name']}\nExcerpt:\n{excerpt}"
                     )
                     reply = "From my knowledge base:\n\n" + llm.chat([
@@ -917,7 +947,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
                 f"You are PRIMUS active agent '{agent_name}', a strict zero-prior-knowledge (tabula rasa) cognitive agent.\n"
                 "STRICT RULES:\n"
                 "1. NEVER answer medical questions, disease causes, tasks, facts, or how-to questions from pretrained knowledge.\n"
-                "2. If the user asks ANY factual or medical question that is not explicitly in your taught knowledge below, you MUST reply: 'I do not know that yet, please teach me.' Do NOT guess or provide outside information.\n"
+                f"2. If the user asks ANY factual or medical question that is not explicitly in your taught knowledge below, you MUST reply: '{chosen_fallback}' Do NOT guess or provide outside information.\n"
                 "3. You may freely converse about yourself, your memory, your perceptions, and your state.\n"
                 "The ONLY knowledge you possess (acquired from your teacher for this agent):\n" + taught_summary
             )
@@ -950,6 +980,11 @@ def clear_session(agent_id=None):
             task_library_html(agent_id), agent_knowledge_html(agent_id),
             None, "", None, sidebar_agents_html(agent_id))
 
+
+
+def start_camera():
+    ok = VISION.start()
+    return camera_html()
 
 def pause_camera():
     VISION.paused = not VISION.paused
@@ -993,8 +1028,7 @@ def timer_tick(agent_id=None):
 
 
 def boot():
-    ok = VISION.start()
-    executor.log("System", f"PRIMUS boot complete. Camera {'online' if ok else 'offline'}", "Success", 1.0)
+    executor.log("System", "PRIMUS boot complete.", "Success", 1.0)
     return timer_tick()
 
 

@@ -46,6 +46,11 @@ def refresh_camera():
     return handlers.camera_html()
 
 
+
+def start_camera_ui():
+    handlers.start_camera()
+    return handlers.camera_html()
+
 def pause_camera_ui():
     handlers.pause_camera()
     return handlers.camera_html()
@@ -269,8 +274,7 @@ with gr.Blocks(
                                     "this active agent..."
                                 ),
                                 elem_classes=["chatgpt-textbox"],
-                                lines=2,
-                                max_lines=5,
+                                max_lines=1,
                                 autofocus=True,
                             )
 
@@ -652,6 +656,7 @@ with gr.Blocks(
                     cam_html = gr.HTML(handlers.camera_html())
 
                     with gr.Row():
+                        start_cam_btn = gr.Button("Start Camera")
                         flip_btn = gr.Button("↔ Flip")
                         pause_btn = gr.Button("⏯ Pause / Resume")
                         snap_btn = gr.Button("📸 Snapshot")
@@ -938,6 +943,12 @@ with gr.Blocks(
         outputs=OUTPUTS,
     )
 
+    chatbot.clear(
+        handlers.clear_session,
+        inputs=[agent_select],
+        outputs=OUTPUTS
+    )
+
     # Task search/editor
     task_search.input(
         handlers.task_choices,
@@ -995,6 +1006,16 @@ with gr.Blocks(
     )
 
     # Perception
+    start_cam_btn.click(
+        start_camera_ui,
+        outputs=[cam_html],
+    )
+
+    use_camera_context.change(
+        start_camera_ui,
+        outputs=[cam_html]
+    )
+
     flip_btn.click(
         flip_camera_ui,
         outputs=[cam_html],
