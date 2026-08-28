@@ -3,8 +3,9 @@ import time
 import sys
 
 import numpy as np
+import torch
 
-STREAM_PORT = 8000
+from src.config import STREAM_PORT
 
 
 class Vision:
@@ -134,10 +135,12 @@ class Vision:
 
             if self.yolo is not None and idx % 3 == 0:
                 try:
-                    results = self.yolo(frame, verbose=False, half=True)
+                    use_half = bool(torch.cuda.is_available())
+                    results = self.yolo(frame, verbose=False, half=use_half)
                     boxes = results[0].boxes
                     self.labels = sorted({self.yolo.names[int(b.cls[0])] for b in boxes})
-                    self.conf = round(float(np.mean([b.conf for b in boxes])), 2) if len(boxes) else 0.0
+                    confs = [float(b.conf[0]) if hasattr(b.conf, "__len__") else float(b.conf) for b in boxes]
+                    self.conf = round(float(np.mean(confs)), 2) if confs else 0.0
                     frame = results[0].plot()
                 except Exception:
                     pass
@@ -146,8 +149,9 @@ class Vision:
                 try:
                     import mediapipe as mp
                     if self._hands_model is None:
-                        self._hands_model = mp.solutions.hands.Hands(static_image_mode=True)
-                    res = self._hands_model.process(frame)
+                        self._hands_model = mp.solutions.hands.Hands(static_image_mode=False, max_num_hands=2)
+                    rgb_for_hands = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    res = self._hands_model.process(rgb_for_hands)
                     self.hands = len(res.multi_hand_landmarks) if res.multi_hand_landmarks else 0
                 except Exception:
                     pass

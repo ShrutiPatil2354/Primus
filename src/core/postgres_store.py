@@ -1,7 +1,9 @@
 """PostgreSQL memory backend with pgvector-ready semantic retrieval."""
 import json
 import os
+import re
 from datetime import datetime
+
 
 class PostgresMemoryStore:
     def __init__(self, url=None):
@@ -9,6 +11,7 @@ class PostgresMemoryStore:
         from sqlalchemy import create_engine, text
         self._text = text
         self.url = url or os.environ["DATABASE_URL"]
+        self.path = self.url
         self.engine = create_engine(self.url, pool_pre_ping=True, future=True)
         self._initialize()
 
@@ -51,6 +54,23 @@ class PostgresMemoryStore:
             id BIGSERIAL PRIMARY KEY, source_type TEXT NOT NULL, source_id TEXT NOT NULL,
             content TEXT NOT NULL, embedding vector(384), created TEXT NOT NULL,
             UNIQUE(source_type, source_id)
+        );
+        CREATE TABLE IF NOT EXISTS agents (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, domain TEXT NOT NULL,
+            instructions TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS agent_skills (
+            id TEXT NOT NULL, agent_id TEXT NOT NULL, name TEXT NOT NULL,
+            steps_json JSONB NOT NULL, confidence DOUBLE PRECISION NOT NULL,
+            created TEXT NOT NULL, updated TEXT NOT NULL, PRIMARY KEY (agent_id, id)
+        );
+        CREATE TABLE IF NOT EXISTS agent_feedback (
+            id BIGSERIAL PRIMARY KEY, agent_id TEXT NOT NULL, skill_id TEXT,
+            event TEXT NOT NULL, reward DOUBLE PRECISION, detail TEXT NOT NULL, t TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS agent_documents (
+            id TEXT NOT NULL, agent_id TEXT NOT NULL, name TEXT NOT NULL,
+            content TEXT NOT NULL, created TEXT NOT NULL, PRIMARY KEY (agent_id, id)
         );
         """
         with self.engine.begin() as db:
@@ -145,6 +165,38 @@ class PostgresMemoryStore:
     def record_skill_version(self, skill_id, skill):
         self.add_skill(skill.get("name", skill_id), skill.get("steps", []), skill.get("perception", ""))
 
+    def add_episode(self, kind, detail):
+        now = datetime.now().isoformat()
+        with self.engine.begin() as db:
+            db.execute(text("INSERT INTO episodes(t, kind, detail) VALUES (:t, :kind, :detail)"), {"t": now, "kind": str(kind), "detail": str(detail)})
+
+    def add_sensory_event(self, kind, detail):
+        now = datetime.now().isoformat()
+        with self.engine.begin() as db:
+            db.execute(text("INSERT INTO sensory_events(t, kind, detail) VALUES (:t, :kind, :detail)"), {"t": now, "kind": str(kind), "detail": str(detail)})
+
+    def set_semantic_fact(self, key, value):
+        now = datetime.now().isoformat()
+        with self.engine.begin() as db:
+            db.execute(text("INSERT INTO semantic_facts(key, value, t) VALUES (:key, :value, :t) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, t=EXCLUDED.t"), {"key": str(key), "value": str(value), "t": now})
+
+    def set_working_memory(self, kv_dict):
+        with self.engine.begin() as db:
+            for k, v in kv_dict.items():
+                db.execute(text("INSERT INTO working_memory(key, value) VALUES (:key, :value) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value"), {"key": str(k), "value": str(v)})
+
+    def update_confidence(self, skill_id, reward=1.0):
+        now = datetime.now().isoformat()
+        with self.engine.begin() as db:
+            current = db.execute(text("SELECT confidence FROM skills WHERE id=:id"), {"id": skill_id}).mappings().first()
+            if not current:
+                return 0.5
+            from src.core import engine
+            old_conf = current["confidence"]
+            new_conf = round(engine.update_confidence(old_conf, reward), 3)
+            db.execute(text("UPDATE skills SET confidence=:confidence, updated=:updated WHERE id=:id"), {"id": skill_id, "confidence": new_conf, "updated": now})
+            return new_conf
+
     def record_feedback(self, skill_id, event, reward, detail):
         with self.engine.begin() as db:
             db.execute(text("INSERT INTO feedback_events(skill_id,event,reward,detail,t) VALUES (:skill_id,:event,:reward,:detail,:t)"), {"skill_id": skill_id, "event": event, "reward": reward, "detail": detail, "t": datetime.now().isoformat()})
@@ -180,6 +232,189 @@ class PostgresMemoryStore:
         with self.engine.begin() as db:
             for table in ("skills", "episodes", "semantic_facts", "sensory_events", "working_memory", "robot_episodes", "skill_versions", "feedback_events", "semantic_documents"):
                 db.execute(text(f"DELETE FROM {table}"))
+            for table in ("agent_feedback", "agent_documents", "agent_skills", "agents"):
+                db.execute(text(f"DELETE FROM {table}"))
+
+    def create_agent(self, name, domain, instructions=""):
+        now = datetime.now().isoformat()
+        agent_id = "_".join(name.lower().split()) or f"agent_{int(datetime.now().timestamp())}"
+        with self.engine.begin() as db:
+            db.execute(text("""
+                INSERT INTO agents(id, name, domain, instructions, created, updated)
+                VALUES (:id, :name, :domain, :instructions, :created, :updated)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name, domain = EXCLUDED.domain,
+                    instructions = EXCLUDED.instructions, updated = EXCLUDED.updated
+            """), {"id": agent_id, "name": name.strip(), "domain": domain.strip(), "instructions": instructions.strip(), "created": now, "updated": now})
+        return self.get_agent(agent_id)
+
+    def list_agents(self):
+        with self.engine.connect() as db:
+            return [dict(row) for row in db.execute(text("SELECT * FROM agents ORDER BY updated DESC")).mappings()]
+
+    def get_agent(self, agent_id):
+        with self.engine.connect() as db:
+            row = db.execute(text("SELECT * FROM agents WHERE id=:id"), {"id": agent_id}).mappings().first()
+        return dict(row) if row else None
+
+    def add_agent_skill(self, agent_id, name, steps):
+        now = datetime.now().isoformat()
+        skill_id = "_".join(name.lower().split()) or f"task_{int(datetime.now().timestamp())}"
+        with self.engine.begin() as db:
+            db.execute(text("INSERT INTO agent_skills VALUES (:id,:agent_id,:name,:steps,.5,:created,:updated) ON CONFLICT (agent_id,id) DO UPDATE SET steps_json=EXCLUDED.steps_json, updated=EXCLUDED.updated"), {"id": skill_id, "agent_id": agent_id, "name": name.strip(), "steps": steps, "created": now, "updated": now})
+        return skill_id, self.get_agent_skill(agent_id, skill_id)
+
+    def get_agent_skill(self, agent_id, skill_id):
+        with self.engine.connect() as db:
+            row = db.execute(text("SELECT * FROM agent_skills WHERE agent_id=:agent_id AND id=:id"), {"agent_id": agent_id, "id": skill_id}).mappings().first()
+        if not row:
+            return None
+        result = dict(row)
+        result["steps"] = result.pop("steps_json")
+        return result
+
+    def update_agent_skill(self, agent_id, skill_id, name, steps):
+        now = datetime.now().isoformat()
+        with self.engine.begin() as db:
+            updated = db.execute(text(
+                "UPDATE agent_skills SET name=:name, steps_json=:steps, updated=:updated "
+                "WHERE agent_id=:agent_id AND id=:id"
+            ), {"agent_id": agent_id, "id": skill_id, "name": name.strip(), "steps": steps, "updated": now}).rowcount
+        return self.get_agent_skill(agent_id, skill_id) if updated else None
+
+    def delete_agent_skill(self, agent_id, skill_id):
+        with self.engine.begin() as db:
+            deleted = db.execute(text(
+                "DELETE FROM agent_skills WHERE agent_id=:agent_id AND id=:id"
+            ), {"agent_id": agent_id, "id": skill_id}).rowcount
+            db.execute(text(
+                "DELETE FROM agent_feedback WHERE agent_id=:agent_id AND skill_id=:id"
+            ), {"agent_id": agent_id, "id": skill_id})
+        return bool(deleted)
+
+    def find_agent_skill(self, agent_id, query):
+        tokens = set(re.findall(r"\w+", (query or "").lower()))
+        with self.engine.connect() as db:
+            rows = list(db.execute(text("SELECT id,name FROM agent_skills WHERE agent_id=:agent_id"), {"agent_id": agent_id}).mappings())
+        matches = [(len(tokens & set(re.findall(r"\w+", row["name"].lower()))), row["id"]) for row in rows]
+        matches.sort(reverse=True)
+        return self.get_agent_skill(agent_id, matches[0][1]) if matches and matches[0][0] else None
+
+    def list_agent_skills(self, agent_id):
+        with self.engine.connect() as db:
+            rows = db.execute(text("SELECT * FROM agent_skills WHERE agent_id=:agent_id ORDER BY updated DESC"), {"agent_id": agent_id}).mappings()
+            return [self._skill(row) for row in rows]
+
+    def agent_summary(self, agent_id):
+        agent = self.get_agent(agent_id)
+        if not agent:
+            return "No selected agent is active."
+        lines = [
+            f"[AGENT] {agent['name']}",
+            f"[DOMAIN] {agent['domain']}",
+        ]
+        if agent.get("instructions"):
+            lines.append(f"[RULES] {agent['instructions']}")
+        skills = self.list_agent_skills(agent_id)
+        if skills:
+            for skill in skills:
+                lines.append(f"[SKILL {skill['id'].upper()}] {skill.get('name', skill['id'])}: " + " -> ".join(skill.get("steps", [])))
+        else:
+            lines.append("No taught procedures yet.")
+        documents = self.list_agent_documents(agent_id)
+        if documents:
+            for document in documents:
+                preview = " ".join(document.get("content", "").split())[:1000]
+                lines.append(f"[DOCUMENT {document['id'].upper()}] {document['name']}: {preview}")
+        else:
+            lines.append("No uploaded documents yet.")
+        return "\n".join(lines)
+
+    def agent_knowledge_training_rows(self, agent_id, limit=1000):
+        with self.engine.connect() as db:
+            rows = db.execute(text(
+                "SELECT f.t,f.agent_id,f.skill_id,f.event,f.reward,f.detail,s.name,s.steps_json "
+                "FROM agent_feedback f JOIN agent_skills s "
+                "ON s.agent_id=f.agent_id AND s.id=f.skill_id "
+                "WHERE f.agent_id=:agent_id ORDER BY f.id LIMIT :limit"
+            ), {"agent_id": agent_id, "limit": limit}).mappings()
+        return [{"timestamp": row["t"], "agent_id": row["agent_id"], "skill_id": row["skill_id"],
+                 "event": row["event"], "reward": row["reward"], "detail": row["detail"],
+                 "name": row["name"], "steps": row["steps_json"]} for row in rows]
+
+    def add_agent_document(self, agent_id, name, content):
+        now = datetime.now().isoformat()
+        doc_id = "_".join(re.findall(r"\w+", name.lower())) or f"document_{int(datetime.now().timestamp())}"
+        with self.engine.begin() as db:
+            db.execute(text(
+                "INSERT INTO agent_documents VALUES (:id,:agent_id,:name,:content,:created) "
+                "ON CONFLICT (agent_id,id) DO UPDATE SET name=EXCLUDED.name, content=EXCLUDED.content, created=EXCLUDED.created"
+            ), {"id": doc_id, "agent_id": agent_id, "name": name.strip(), "content": content.strip(), "created": now})
+        return self.get_agent_document(agent_id, doc_id)
+
+    def get_agent_document(self, agent_id, doc_id):
+        with self.engine.connect() as db:
+            row = db.execute(text(
+                "SELECT * FROM agent_documents WHERE agent_id=:agent_id AND id=:id"
+            ), {"agent_id": agent_id, "id": doc_id}).mappings().first()
+        return dict(row) if row else None
+
+    def list_agent_documents(self, agent_id):
+        with self.engine.connect() as db:
+            rows = db.execute(text(
+                "SELECT * FROM agent_documents WHERE agent_id=:agent_id ORDER BY created DESC"
+            ), {"agent_id": agent_id}).mappings()
+        return [dict(row) for row in rows]
+
+    def find_agent_document(self, agent_id, query):
+        tokens = set(re.findall(r"\w+", (query or "").lower()))
+        if not tokens:
+            return None
+        best = None
+        best_score = 0
+        for doc in self.list_agent_documents(agent_id):
+            searchable = f"{doc['name']} {doc['content'][:4000]}".lower()
+            score = len(tokens & set(re.findall(r"\w+", searchable)))
+            if score > best_score:
+                best = doc
+                best_score = score
+        return best if best_score else None
+
+    def agent_feedback(self, agent_id, skill_id, event, reward, detail):
+        with self.engine.begin() as db:
+            db.execute(text("INSERT INTO agent_feedback(agent_id,skill_id,event,reward,detail,t) VALUES (:agent_id,:skill_id,:event,:reward,:detail,:t)"), {"agent_id": agent_id, "skill_id": skill_id, "event": event, "reward": reward, "detail": detail, "t": datetime.now().isoformat()})
+
+    def delete_agent_document(self, agent_id, doc_id):
+        with self.engine.begin() as db:
+            deleted = db.execute(text(
+                "DELETE FROM agent_documents WHERE agent_id = :agent_id AND id = :id"
+            ), {"agent_id": agent_id, "id": doc_id}).rowcount
+        return bool(deleted)
+
+    def delete_agent(self, agent_id):
+        with self.engine.begin() as db:
+            db.execute(text("DELETE FROM agent_feedback WHERE agent_id = :id"), {"id": agent_id})
+            db.execute(text("DELETE FROM agent_documents WHERE agent_id = :id"), {"id": agent_id})
+            db.execute(text("DELETE FROM agent_skills WHERE agent_id = :id"), {"id": agent_id})
+            deleted = db.execute(text("DELETE FROM agents WHERE id = :id"), {"id": agent_id}).rowcount
+        return bool(deleted)
+
+    def clear_agent_knowledge(self, agent_id):
+        with self.engine.begin() as db:
+            if agent_id:
+                db.execute(text("DELETE FROM agent_skills WHERE agent_id = :id"), {"id": agent_id})
+                db.execute(text("DELETE FROM agent_documents WHERE agent_id = :id"), {"id": agent_id})
+                db.execute(text("DELETE FROM agent_feedback WHERE agent_id = :id"), {"id": agent_id})
+            else:
+                for table in ("skills", "episodes", "semantic_facts", "sensory_events", "working_memory", "skill_versions", "feedback_events"):
+                    db.execute(text(f"DELETE FROM {table}"))
+
+    def agent_stats(self, agent_id):
+        with self.engine.connect() as db:
+            skills = db.execute(text("SELECT COUNT(*) FROM agent_skills WHERE agent_id=:agent_id"), {"agent_id": agent_id}).scalar_one()
+            events = db.execute(text("SELECT COUNT(*) FROM agent_feedback WHERE agent_id=:agent_id"), {"agent_id": agent_id}).scalar_one()
+            documents = db.execute(text("SELECT COUNT(*) FROM agent_documents WHERE agent_id=:agent_id"), {"agent_id": agent_id}).scalar_one()
+        return {"skills": skills, "events": events, "documents": documents}
 
 
     def upsert_embedding(self, source_type, source_id, content, embedding):

@@ -38,21 +38,24 @@ def start_plan(skill_id, steps):
 
 
 def _run():
-    log("Perception", "Scanning environment and locating objects", "Success",
-        round(random.uniform(0.85, 0.97), 2))
-    for i in range(len(PLAN)):
-        with LOCK:
-            PLAN[i]["status"] = "in_progress"
-            detail = PLAN[i]["text"]
-        log("Action", detail, "In Progress", None)
-        time.sleep(1.1)
-        score = round(random.uniform(0.85, 0.97), 2)
-        with LOCK:
-            PLAN[i]["status"] = "success"
-        log("Action", detail, "Success", score)
-        memory.bump_episode()
-    log("Learning", f"Task {CURRENT_TASK} completed", "Success", 0.92)
-    memory.STORE.record_feedback(CURRENT_TASK, "execution", 1.0, "All planned steps completed")
+    try:
+        log("Perception", "Scanning environment and locating objects", "Success",
+            round(random.uniform(0.85, 0.97), 2))
+        for i in range(len(PLAN)):
+            with LOCK:
+                PLAN[i]["status"] = "in_progress"
+                detail = PLAN[i]["text"]
+            log("Action", detail, "In Progress", None)
+            time.sleep(1.1)
+            score = round(random.uniform(0.85, 0.97), 2)
+            with LOCK:
+                PLAN[i]["status"] = "success"
+            log("Action", detail, "Success", score)
+            memory.bump_episode("action", f"Completed step: {detail}")
+        log("Learning", f"Task {CURRENT_TASK} completed", "Success", 0.92)
+        memory.STORE.record_feedback(CURRENT_TASK, "execution", 1.0, "All planned steps completed")
+    except Exception as e:
+        log("Execution Error", str(e), "Error", 0.0)
 
 
 def plan_html():
@@ -60,31 +63,53 @@ def plan_html():
         plan = list(PLAN)
         task = CURRENT_TASK
     if not plan:
-        return ""
+        return '''
+        <div class="telemetry-box">
+          <div class="telemetry-idle-row">
+            <span class="telemetry-clock-icon">🕒</span>
+            <div class="telemetry-idle-text">
+              <span class="idle-title">No active execution</span>
+              <span class="idle-sub">Waiting for an agent task...</span>
+            </div>
+          </div>
+          <div class="telemetry-5grid">
+            <div class="stat-cell"><span class="cell-label">State</span><span class="cell-val">Idle</span></div>
+            <div class="stat-cell"><span class="cell-label">Step</span><span class="cell-val">-</span></div>
+            <div class="stat-cell"><span class="cell-label">Confidence</span><span class="cell-val">-</span></div>
+            <div class="stat-cell"><span class="cell-label">Exec. Time</span><span class="cell-val">-</span></div>
+            <div class="stat-cell"><span class="cell-label">Events</span><span class="cell-val">0</span></div>
+          </div>
+        </div>'''
     done = sum(1 for p in plan if p["status"] == "success")
     conf = 0.87
     items = []
     for i, p in enumerate(plan, 1):
         if p["status"] == "success":
-            icon = '<span style="color:#22c55e">✔</span>'
-            color = "#e5e7eb"
+            icon = '<span class="step-icon success">✔</span>'
+            cls = "step-item success"
         elif p["status"] == "in_progress":
-            icon = '<span style="color:#3b82f6">▶</span>'
-            color = "#60a5fa"
+            icon = '<span class="step-icon running">▶</span>'
+            cls = "step-item running"
         else:
-            icon = '<span style="color:#475569">○</span>'
-            color = "#64748b"
+            icon = '<span class="step-icon pending">○</span>'
+            cls = "step-item pending"
         items.append(
-            f'<div style="margin:6px 0;color:{color};font-size:.85rem">{icon} {i}. {p["text"]}</div>'
+            f'<div class="{cls}">{icon} <span class="step-num">{i}.</span> <span class="step-text">{p["text"]}</span></div>'
         )
     return f'''
-    <div style="background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:14px;margin-top:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:700;color:#e5e7eb">⚙ Task Plan — {task or ""}</span>
-        <span style="color:#22c55e;font-size:.8rem">Confidence: {conf:.2f}</span>
+    <div class="telemetry-box running">
+      <div class="telemetry-header">
+        <span class="telemetry-title">⚡ Task Plan: <b>{task or "Autonomous Execution"}</b></span>
+        <span class="telemetry-badge">{conf:.0%} Confidence</span>
       </div>
-      {''.join(items)}
-      <div style="color:#64748b;font-size:.72rem;margin-top:6px">{done}/{len(plan)} steps complete</div>
+      <div class="telemetry-step-list">{''.join(items)}</div>
+      <div class="telemetry-5grid" style="margin-top:8px;">
+        <div class="stat-cell"><span class="cell-label">State</span><span class="cell-val status-running">Running</span></div>
+        <div class="stat-cell"><span class="cell-label">Step</span><span class="cell-val">{done}/{len(plan)}</span></div>
+        <div class="stat-cell"><span class="cell-label">Confidence</span><span class="cell-val">{conf:.0%}</span></div>
+        <div class="stat-cell"><span class="cell-label">Exec. Time</span><span class="cell-val">0.6s</span></div>
+        <div class="stat-cell"><span class="cell-label">Events</span><span class="cell-val">{len(plan)}</span></div>
+      </div>
     </div>'''
 
 

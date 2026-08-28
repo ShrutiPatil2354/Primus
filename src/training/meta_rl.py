@@ -41,9 +41,10 @@ def context_vector(row):
     return vector
 
 
-def knowledge_tasks(limit=1000):
+def knowledge_tasks(limit=1000, agent_id=None):
     tasks = defaultdict(list)
-    for row in STORE.knowledge_training_rows(limit):
+    rows = STORE.agent_knowledge_training_rows(agent_id, limit) if agent_id else STORE.knowledge_training_rows(limit)
+    for row in rows:
         if row["event"] not in EVENT_ACTIONS:
             continue
         tasks[row["skill_id"]].append((context_vector(row), EVENT_ACTIONS[row["event"]], float(row["reward"] if row["reward"] is not None else 0.0)))
@@ -65,10 +66,11 @@ def adapt(model, rows, steps=3, lr=0.02):
     return learner
 
 
-def train(epochs=25, checkpoint="data/knowledge_meta_policy.pt", resume=False):
-    tasks = {key: rows for key, rows in knowledge_tasks().items() if len(rows) >= 2}
+def train(epochs=25, checkpoint="data/knowledge_meta_policy.pt", resume=False, agent_id=None):
+    tasks = {key: rows for key, rows in knowledge_tasks(agent_id=agent_id).items() if len(rows) >= 2}
     if len(tasks) < 2:
-        raise ValueError("Knowledge meta-RL needs at least two learned tasks with two feedback episodes each. Teach and use more tasks first.")
+        scope = f"agent '{agent_id}'" if agent_id else "default memory"
+        raise ValueError(f"Knowledge meta-RL needs at least two learned tasks with two feedback episodes each for {scope}. Teach and use more tasks first.")
     model = KnowledgePolicy()
     start_epoch = 0
     path = Path(checkpoint)
@@ -92,7 +94,8 @@ def train(epochs=25, checkpoint="data/knowledge_meta_policy.pt", resume=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model": model.state_dict(), "epoch": start_epoch + epochs,
                 "tasks": sorted(tasks), "zero_prior": not resume,
-                "domain": "task_knowledge", "history": history}, path)
+                "domain": "task_knowledge", "agent_id": agent_id or "",
+                "history": history}, path)
     return {"checkpoint": str(path), "tasks": sorted(tasks), "history": history}
 
 
@@ -101,9 +104,13 @@ def main():
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--checkpoint", default="data/knowledge_meta_policy.pt")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--agent-id", default="", help="Train/evaluate one custom agent's knowledge only")
     args = parser.parse_args()
-    result = train(args.epochs, args.checkpoint, args.resume)
-    print(json.dumps({"checkpoint": result["checkpoint"], "domain": "task_knowledge", "tasks": result["tasks"], "final": result["history"][-1]}, indent=2))
+    agent_id = args.agent_id.strip() or None
+    result = train(args.epochs, args.checkpoint, args.resume, agent_id)
+    print(json.dumps({"checkpoint": result["checkpoint"], "domain": "task_knowledge",
+                      "agent_id": agent_id or "", "tasks": result["tasks"],
+                      "final": result["history"][-1]}, indent=2))
 
 
 if __name__ == "__main__":

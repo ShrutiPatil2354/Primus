@@ -43,7 +43,8 @@ def main():
         parser.error(f"File not found: {args.file}")
     records = read_records(args.file)
     imported = STORE.bulk_upsert_skills(records)
-    print(f"Imported or updated {imported} task procedures into {STORE.path}")
+    dest = getattr(STORE, "path", getattr(STORE, "url", "database"))
+    print(f"Imported or updated {imported} task procedures into {dest}")
 
 
 if __name__ == "__main__":

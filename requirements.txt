@@ -14,3 +14,5 @@ SQLAlchemy
 psycopg[binary]
 pgvector
 torch
+pypdf
+python-docx

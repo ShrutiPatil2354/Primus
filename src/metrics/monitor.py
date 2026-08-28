@@ -6,7 +6,7 @@ from collections import deque
 
 import psutil
 
-from src.config import MODEL_NAME, START_TIME
+from src.config import MODEL_NAME, START_TIME, BASE_DIR
 from src.core import engine, llm, memory, executor
 from src.perception.vision import VISION
 
@@ -69,11 +69,19 @@ def sparkline(vals, color, w=110, h=26):
             f'<polyline points="{" ".join(pts)}" fill="none" stroke="{color}" stroke-width="2"/></svg>')
 
 
+def _disk_path():
+    drive = os.path.splitdrive(BASE_DIR)[0]
+    return f"{drive}\\" if drive else "/"
+
+
 def sample():
     global _last_net
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory()
-    disk = psutil.disk_usage("/")
+    try:
+        disk = psutil.disk_usage(_disk_path())
+    except Exception:
+        disk = psutil.disk_usage("/")
     g = gpu_dynamic()
     gs = gpu_static()
     vram_pct = (float(g["used"]) / float(gs["vram_total"])) * 100 if float(gs["vram_total"]) else 0
@@ -101,28 +109,28 @@ def sample():
 
 def _card(title, value, sub, color, spark):
     return f'''
-    <div style="flex:1;min-width:150px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
-      <div style="color:#8b96ab;font-size:.72rem">{title}</div>
-      <div style="color:{color};font-size:1.45rem;font-weight:800">{value}</div>
-      <div style="color:#8b96ab;font-size:.7rem">{sub}</div>{spark}
+    <div style="flex:1;min-width:180px;background:#080f1b;border:1px solid #1c3252;border-radius:12px;padding:14px 16px;box-sizing:border-box">
+      <div style="color:#94a3b8;font-size:.74rem;font-weight:600">{title}</div>
+      <div style="color:{color};font-size:1.5rem;font-weight:800;margin:2px 0">{value}</div>
+      <div style="color:#64748b;font-size:.72rem">{sub}</div>{spark}
     </div>'''
 
 
 def header_html():
     gs = gpu_static()
     chip = lambda icon, k, v: f'''
-    <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:10px;padding:8px 14px">
+    <div style="display:flex;align-items:center;gap:8px;background:#080f1b;border:1px solid #1c3252;border-radius:10px;padding:8px 14px">
       <span>{icon}</span>
-      <div><div style="color:#8b96ab;font-size:.65rem">{k}</div>
-      <div style="color:#e5e7eb;font-size:.8rem;font-weight:600">{v}</div></div>
+      <div><div style="color:#94a3b8;font-size:.68rem">{k}</div>
+      <div style="color:#ffffff;font-size:.82rem;font-weight:700">{v}</div></div>
     </div>'''
     return f'''
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;width:100%">
       <div>
-        <div style="font-size:1.6rem;font-weight:800;color:#e5e7eb">PRIMUS
-          <span style="background:#ffffff;color:#000;font-size:.6rem;border-radius:20px;padding:3px 8px;vertical-align:middle">BETA</span>
+        <div style="font-size:1.6rem;font-weight:800;color:#ffffff">PRIMUS
+          <span style="background:#2563eb;color:#ffffff;font-size:.65rem;border-radius:20px;padding:3px 10px;vertical-align:middle;font-weight:800">STUDIO</span>
         </div>
-        <div style="color:#8b96ab;font-size:.78rem">Zero-Prior • Tabula Rasa • Learn from You</div>
+        <div style="color:#94a3b8;font-size:.80rem">Zero-Prior • Tabula Rasa • Autonomous Cognitive Core</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         {chip("🖥", "OS", f"{platform.system()} {platform.release()}")}
@@ -136,18 +144,18 @@ def header_html():
 
 def stats_html(m):
     return f'''
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      {_card("CPU Usage", f"{m['cpu']:.0f}%", "", "#ffffff", sparkline(CPU_H, "#ffffff"))}
-      {_card("RAM Usage", f"{m['ram'].used / 1024 ** 3:.1f} GB", f"{m['ram'].percent:.0f}%", "#ffffff", sparkline(RAM_H, "#ffffff"))}
-      {_card("VRAM Usage", f"{float(m['gpu']['used']) / 1024:.1f} GB", f"{m['vram_pct']:.0f}%", "#ffffff", sparkline(VRAM_H, "#ffffff"))}
-      {_card("GPU Temp", f"{m['gpu']['temp']}°C", "Normal", "#ffffff", sparkline(VRAM_H, "#ffffff"))}
-      {_card("Disk Usage", f"{m['disk'].percent:.0f}%", f"{m['disk'].total / 1024 ** 3:.0f} GB", "#ffffff", sparkline(DISK_H, "#ffffff"))}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;width:100%;box-sizing:border-box">
+      {_card("CPU Usage", f"{m['cpu']:.0f}%", "", "#38bdf8", sparkline(CPU_H, "#38bdf8"))}
+      {_card("RAM Usage", f"{m['ram'].used / 1024 ** 3:.1f} GB", f"{m['ram'].percent:.0f}%", "#a855f7", sparkline(RAM_H, "#a855f7"))}
+      {_card("VRAM Usage", f"{float(m['gpu']['used']) / 1024:.1f} GB", f"{m['vram_pct']:.0f}%", "#22c55e", sparkline(VRAM_H, "#22c55e"))}
+      {_card("GPU Temp", f"{m['gpu']['temp']}°C", "Normal", "#f97316", sparkline(VRAM_H, "#f97316"))}
+      {_card("Disk Usage", f"{m['disk'].percent:.0f}%", f"{m['disk'].total / 1024 ** 3:.0f} GB", "#e2e8f0", sparkline(DISK_H, "#38bdf8"))}
     </div>'''
 
 
-def _kv(k, v, color="#e5e7eb"):
-    return f'''<div style="display:flex;justify-content:space-between;margin:5px 0;font-size:.78rem">
-      <span style="color:#8b96ab">{k}</span><span style="color:{color};font-weight:600">{v}</span></div>'''
+def _kv(k, v, color="#ffffff"):
+    return f'''<div style="display:flex;justify-content:space-between;margin:6px 0;font-size:.80rem">
+      <span style="color:#94a3b8">{k}</span><span style="color:{color};font-weight:700">{v}</span></div>'''
 
 
 def panels_html(m):
@@ -158,9 +166,9 @@ def panels_html(m):
     except (AttributeError, OSError):
         loadavg = "Not available on Windows"
     return f'''
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <div style="flex:1;min-width:230px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
-        <div style="color:#e5e7eb;font-weight:700;font-size:.85rem;margin-bottom:6px">AI & Model Metrics</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;width:100%;box-sizing:border-box">
+      <div style="flex:1;min-width:260px;background:#080f1b;border:1px solid #1c3252;border-radius:12px;padding:14px 16px;box-sizing:border-box">
+        <div style="color:#38bdf8;font-weight:800;font-size:.88rem;margin-bottom:8px">AI &amp; Model Metrics</div>
         {_kv("Model", MODEL_NAME)}
         {_kv("Context Length", "4,096 tokens")}
         {_kv("Inference Time", f"{llm.LAST['inference_ms']} ms")}
@@ -169,8 +177,8 @@ def panels_html(m):
         {_kv("Skills Stored", st['skills'])}
         {_kv("Engine", engine.status())}
       </div>
-      <div style="flex:1;min-width:230px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
-        <div style="color:#e5e7eb;font-weight:700;font-size:.85rem;margin-bottom:6px">System Performance</div>
+      <div style="flex:1;min-width:260px;background:#080f1b;border:1px solid #1c3252;border-radius:12px;padding:14px 16px;box-sizing:border-box">
+        <div style="color:#22c55e;font-weight:800;font-size:.88rem;margin-bottom:8px">System Performance</div>
         {_kv("Latency (End-to-End)", f"{llm.LAST['latency_ms']} ms", "#ffffff")}
         {_kv("FPS (Camera)", VISION.fps)}
         {_kv("Network (I/O)", f"{m['net']} Mbps")}
@@ -179,8 +187,8 @@ def panels_html(m):
         {_kv("Processes", len(psutil.pids()))}
         {_kv("Load Average", loadavg)}
       </div>
-      <div style="flex:1;min-width:230px;background:rgba(255,255,255,0.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.16);border-radius:12px;padding:12px 14px">
-        <div style="color:#e5e7eb;font-weight:700;font-size:.85rem;margin-bottom:6px">Perception & Memory</div>
+      <div style="flex:1;min-width:260px;background:#080f1b;border:1px solid #1c3252;border-radius:12px;padding:14px 16px;box-sizing:border-box">
+        <div style="color:#a855f7;font-weight:800;font-size:.88rem;margin-bottom:8px">Perception &amp; Memory</div>
         {_kv("Objects Detected", len(VISION.labels))}
         {_kv("Hand Tracking", f"{VISION.hands} hands")}
         {_kv("YOLO Confidence", VISION.conf)}
@@ -195,7 +203,10 @@ def panels_html(m):
 def hardware_html():
     gs = gpu_static()
     ram_total = psutil.virtual_memory().total / 1024 ** 3
-    disk_total = psutil.disk_usage("/").total / 1024 ** 3
+    try:
+        disk_total = psutil.disk_usage(_disk_path()).total / 1024 ** 3
+    except Exception:
+        disk_total = psutil.disk_usage("/").total / 1024 ** 3
     try:
       if platform.system() == "Windows":
         cpu_name = platform.processor() or platform.machine() or "CPU"

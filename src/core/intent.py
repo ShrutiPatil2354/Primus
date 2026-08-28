@@ -11,7 +11,8 @@ TASK_QUERY_KEYS = [
     "how to", "how do", "how should", "how can i", "way to", "steps for",
     "procedure for", "recipe", "make ", "cook ", "chop ", "cut ", "boil ",
     "bake ", "prepare ", "brew ", "what is", "who is", "where is", "when is",
-    "why is", "explain", "capital", "meaning",
+    "why is", "explain", "capital", "meaning", "tell me about", "describe",
+    "define", "summarize",
 ]
 
 
@@ -27,15 +28,16 @@ def classify(text):
         return "conversation"
     if any(k in t for k in TEACH_KEYS):
         return "teach"
+    if any(k in t for k in TASK_QUERY_KEYS):
+        return "task_query"
     if any(k in t for k in PERFORM_KEYS):
         return "perform"
-    if any(k in t for k in TASK_QUERY_KEYS):
+    if "?" in t:
         return "task_query"
     return "conversation"
 
 
 def clean_task_name(text):
-    text = (text or "").strip().lower()
     for w in ["learn", "teach", "remember", "add", "create", "encode", "task",
               "skill", "primus", "how", "to", "the", "a", "an", "please", "me"]:
         text = re.sub(rf"\b{w}\b", " ", text)
