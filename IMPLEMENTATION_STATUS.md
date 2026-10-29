@@ -9,9 +9,12 @@ Updated 2026-10-29 on `feature/reference-architecture`.
   adds each feature group in separate commits. Changes in this work are being
   verified before updating the remote branch.
 - Existing local databases and model files were not migrated or rewritten.
-- The original zPrimus chat/UI flow remains the default. Reference cognition
-  enters it only when `PRIMUS_REFERENCE_COGNITION=1`; the reference viewer is a
-  separate `reference_app.py` process on port 7862 by default.
+- The original zPrimus chat/UI flow remains the default and first tab. The
+  reference viewer is available in a **Reference Simulator** tab on the same
+  local URL; it starts on tab selection and shuts down when another tab is
+  selected. `reference_app.py` remains available as a standalone viewer on
+  port 7862. Reference cognition enters the zPrimus chat flow only when
+  `PRIMUS_REFERENCE_COGNITION=1`.
 
 ## Added feature groups
 
@@ -29,8 +32,9 @@ Updated 2026-10-29 on `feature/reference-architecture`.
 - Optional ROS 2 bridges adapted to read the zPrimus camera stream.
 - Reference C++ camera/reflex/spine sources with a CMake recipe, and the Rust
   watchdog prototype with its platform and safety limits documented.
-- A separate reference viewer/voice launcher; voice is opt-in, preventing a
-  second microphone loop from starting with the default app.
+- The reference viewer and opt-in voice controls are available in the combined
+  dashboard's Reference Simulator tab. The separate `reference_app.py`
+  launcher remains available for a standalone viewer.
 
 ## Verification and remaining environment requirements
 
@@ -39,7 +43,9 @@ Updated 2026-10-29 on `feature/reference-architecture`.
   builder closes its temporary file before MuJoCo loads it.
 - The optional reference voice imports audio dependencies lazily while keeping
   patchable module symbols for its tests.
-- All 76 tests pass. The reference viewer builds under a mocked camera object,
+- All 79 tests pass. The combined UI exposes both tab surfaces and checks the
+  viewer's lazy start/stop lifecycle and opt-in microphone controls. The
+  reference viewer builds under a mocked camera object,
   and the default app builds with the Cognition Lab both disabled and enabled.
 - MJX training needs JAX. Cloud inference needs model files. ROS 2 needs a ROS
   environment. The C++ sources need an installed compiler plus MuJoCo/OpenCV

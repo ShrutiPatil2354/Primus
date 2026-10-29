@@ -6,9 +6,9 @@ the companion stack and hardware-adjacent pieces are isolated and opt-in.
 
 | Reference area | Added in Primus | How to access it / current limit |
 |---|---|---|
-| Voice companion, brain, teaching, object naming, people memory, social awareness | `primus/agent.py`, `brain.py`, `ears.py`, `mouth.py`, `objects.py`, `people.py`, `social_awareness.py` and related modules | Run `reference_app.py`; the visual UI is separate. Set `PRIMUS_REFERENCE_VOICE=1` to start the microphone loop. |
+| Voice companion, brain, teaching, object naming, people memory, social awareness | `primus/agent.py`, `brain.py`, `ears.py`, `mouth.py`, `objects.py`, `people.py`, `social_awareness.py` and related modules | The same main URL includes a **Reference Simulator** tab with explicit Start/Stop voice controls and camera/simulation viewing. `reference_app.py` remains a standalone option. `PRIMUS_REFERENCE_VOICE=1` starts voice automatically in that standalone app. |
 | Cognition sessions 1–9 | Full source package under `primus/`, plus `docs/HUMAN_BEHAVIOR.md` and the reference tests | Set `PRIMUS_REFERENCE_COGNITION=1` to add the cognition prompt/memory hooks to default-app conversation turns. Heuristics remain advisory and use explicit inputs. |
-| G1 MuJoCo, kitchen, generated room, camera/rendering | `sim/g1/`, `sim/kitchen_g1.xml`, `primus/scene_builder.py`, `room.py`, `cams.py`, `render.py`, plus `src/simulation/` | Run the separate reference UI or use the headless `G1Simulation`. No physical actuation is included. |
+| G1 MuJoCo, kitchen, generated room, camera/rendering | `sim/g1/`, `sim/kitchen_g1.xml`, `primus/scene_builder.py`, `room.py`, `cams.py`, `render.py`, plus `src/simulation/` | Select **Reference Simulator** in the main dashboard, or use the headless `G1Simulation`. The viewer is stopped when another main tab is selected. No physical actuation is included. |
 | MJX/PPO, episode collection, ASTRA, export, world-model CEM | `cloud/` including training, collection, serving, and shell scripts | Standalone only. JAX is absent here, so MJX training cannot run in this environment. The CEM loader accepts the ASTRA trainer checkpoint. |
 | Cloud speech, depth, person embeddings, YOLO service | `cloud/svc_percept.py`, model download and serve scripts | Model files and service dependencies are not bundled; it is not connected to the default local perception path. |
 | ROS 2 camera, brain, and executor topics | `primus_ros2/` | Requires a ROS 2 environment. The executor reports that no motion backend is configured. |
@@ -25,13 +25,17 @@ are included instead.
 
 ## Verification on this workstation
 
-- `python -m unittest discover -s tests`: 76 tests pass.
+- `python -m unittest discover -s tests`: 79 tests pass.
 - The default zPrimus app imports with the Cognition Lab disabled and enabled.
+- The combined dashboard serves the existing Workspace and Reference Simulator
+  tabs together at one URL. The reference camera remains idle until its tab is
+  selected, and the selection/cleanup handlers are covered by tests.
 - The reference Gradio viewer builds under a mocked camera object, without
   opening camera hardware.
-- `reference_app.py` launched as a local HTTP service and returned HTTP 200
-  from `http://127.0.0.1:7862/`; camera capture was unavailable on this host,
-  and the UI reported that condition while remaining available.
+- The combined dashboard launched locally and returned HTTP 200 with both tab
+  labels in its page. The standalone `reference_app.py` also returned HTTP 200
+  on port 7862. Camera capture was unavailable on this host, and the viewer
+  reported that condition while remaining available.
 - The reference procedural G1 scene loads in MuJoCo on Windows.
 - C++ and Rust native builds, ROS 2 launch, MJX training, and model-backed cloud
   services need their respective external toolchains or assets and were not

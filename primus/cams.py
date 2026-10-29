@@ -137,9 +137,12 @@ class Cams:
     def close(self):
         self._stop.set()
         publish_teacher_frame(None)
-        self.web.close()
         self._render_thread.join(timeout=5)
         self._detect_thread.join(timeout=5)
+        if not self._render_thread.is_alive():
+            self.web.close()
+        else:
+            LOGGER.error('Camera renderer did not stop before the shutdown timeout')
 
     def _detect_loop(self):
         sequence = -1

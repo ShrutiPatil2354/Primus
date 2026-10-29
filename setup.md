@@ -140,7 +140,7 @@ Keep Ollama running in another terminal. The app calls its local API at
 available for general chat. Ollama installation is separate from the Python
 environment and is not performed by the project scripts.
 
-## 3. Run either local app
+## 3. Run the combined local app
 
 Connect or select a camera and microphone, activate the environment, then:
 
@@ -148,11 +148,15 @@ Connect or select a camera and microphone, activate the environment, then:
 .\run.ps1
 ```
 
-Open the URL printed by the script (normally <http://127.0.0.1:7860>). This is
-the existing zPrimus dashboard.
+Open the URL printed by the script (normally <http://127.0.0.1:7860>). The
+existing zPrimus Workspace remains the first tab. The **Reference Simulator**
+tab opens the reference camera and G1 viewer under this same URL; its camera
+and simulation loop start when selected and stop when you switch to another
+tab. The Reference Simulator tab also has explicit Start/Stop voice controls;
+the microphone stays off until Start is clicked.
 
-To launch the reference companion scene/camera UI alongside the main app, use
-another PowerShell window:
+To launch only the reference viewer on its own port instead, use another
+PowerShell window:
 
 ```powershell
 .\.venv\Scripts\python.exe .\reference_app.py

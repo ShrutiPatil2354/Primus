@@ -6,6 +6,14 @@ from src.ui import theme
 from src.ui import handlers
 from src.config import SERVER_PORT
 
+try:
+    from primus import ui as reference_ui
+except ImportError as exc:
+    reference_ui = None
+    reference_ui_import_error = str(exc)
+else:
+    reference_ui_import_error = None
+
 
 # ---------------------------------------------------------------------------
 # Small UI helpers
@@ -123,7 +131,7 @@ def _switch_mode_with_hint(mode):
 with gr.Blocks(
     title="PRIMUS AI Studio",
     theme=gr.themes.Base(),
-    css=theme.CSS,
+    css=theme.CSS + (reference_ui.EMBEDDED_CSS if reference_ui else ""),
     fill_width=True,
 ) as demo:
 
@@ -152,12 +160,13 @@ with gr.Blocks(
     # PAGES
     # =======================================================================
 
+    reference_cleanup_tabs = []
     with gr.Tabs(elem_classes=["app-tabs"]) as main_tabs:
 
         # -------------------------------------------------------------------
         # WORKSPACE
         # -------------------------------------------------------------------
-        with gr.Tab("Workspace", id="workspace-tab"):
+        with gr.Tab("Workspace", id="workspace-tab") as workspace_tab:
 
             with gr.Row(elem_classes=["workspace-layout"]):
 
@@ -192,6 +201,7 @@ with gr.Blocks(
                         allow_custom_value=False,
                         elem_classes=["sidebar-search-box"],
                     )
+
                     sidebar_hidden_btn = gr.Button("hidden", elem_id="sidebar_hidden_btn", elem_classes=["hidden-trigger"])
 
                     sidebar_view = gr.HTML(
@@ -386,10 +396,12 @@ with gr.Blocks(
 
             status_bar = gr.HTML(status_bar_html())
 
+        reference_cleanup_tabs.append(workspace_tab)
+
         # -------------------------------------------------------------------
         # BUILD AGENT
         # -------------------------------------------------------------------
-        with gr.Tab("Build Your Agent", id="build-agent-tab"):
+        with gr.Tab("Build Your Agent", id="build-agent-tab") as build_agent_tab:
 
             gr.HTML("""
             <div class="page-top-banner">
@@ -542,10 +554,12 @@ with gr.Blocks(
                             variant="stop",
                         )
 
+        reference_cleanup_tabs.append(build_agent_tab)
+
         # -------------------------------------------------------------------
         # LEARNING / MEMORY
         # -------------------------------------------------------------------
-        with gr.Tab("Learning", id="learning-tab"):
+        with gr.Tab("Learning", id="learning-tab") as learning_tab:
 
             gr.HTML("""
             <div class="page-top-banner compact">
@@ -662,10 +676,12 @@ with gr.Blocks(
                     )
                     task_notice = gr.HTML()
 
+        reference_cleanup_tabs.append(learning_tab)
+
         # -------------------------------------------------------------------
         # PERCEPTION
         # -------------------------------------------------------------------
-        with gr.Tab("Perception", id="perception-tab"):
+        with gr.Tab("Perception", id="perception-tab") as perception_tab:
 
             gr.HTML("""
             <div class="page-top-banner compact">
@@ -697,10 +713,12 @@ with gr.Blocks(
                         autoplay=True,
                     )
 
+        reference_cleanup_tabs.append(perception_tab)
+
         # -------------------------------------------------------------------
         # SYSTEM
         # -------------------------------------------------------------------
-        with gr.Tab("System", id="system-tab"):
+        with gr.Tab("System", id="system-tab") as system_tab:
 
             gr.HTML("""
             <div class="page-top-banner compact">
@@ -715,12 +733,14 @@ with gr.Blocks(
             stats_html = gr.HTML()
             panels_html = gr.HTML()
 
+        reference_cleanup_tabs.append(system_tab)
+
         # The research surface is opt-in. It is not part of the default chat
         # flow and has no output wired into the agent, memory gate, or voice.
         if os.getenv("PRIMUS_COGNITION_UI", "0").strip().lower() in {"1", "true", "yes"}:
             from src.ui import cognition_handlers
 
-            with gr.Tab("Cognition Lab", id="cognition-lab-tab"):
+            with gr.Tab("Cognition Lab", id="cognition-lab-tab") as cognition_tab:
                 gr.Markdown(
                     "## Optional cognition memory lab\n"
                     "These notes use a separate research database and do not affect chat answers."
@@ -757,9 +777,43 @@ with gr.Blocks(
                     outputs=[cog_status, cog_records],
                 )
 
+            reference_cleanup_tabs.append(cognition_tab)
+
+        with gr.Tab("Reference Simulator", id="reference-simulator-tab") as reference_tab:
+            gr.Markdown(
+                "## Reference architecture\n"
+                "Camera views, the G1 kitchen simulation, and reference telemetry "
+                "run here under the same Primus URL. The viewer starts when this "
+                "tab is selected and stops when you leave it."
+            )
+            if reference_ui is not None:
+                reference_timer, reference_viewport, reference_telemetry = reference_ui.render()
+            else:
+                gr.Markdown(
+                    "The reference viewer dependencies are unavailable in this "
+                    "Python environment: "
+                    f"`{reference_ui_import_error}`. Install the project requirements "
+                    "to enable this tab."
+                )
+
     # =======================================================================
     # STATE
     # =======================================================================
+
+    if reference_ui is not None:
+        reference_tab.select(
+            reference_ui.start_viewer,
+            inputs=None,
+            outputs=[reference_viewport, reference_telemetry, reference_timer],
+            show_progress="hidden",
+        )
+        for tab in reference_cleanup_tabs:
+            tab.select(
+                reference_ui.stop_viewer,
+                inputs=None,
+                outputs=[reference_timer],
+                show_progress="hidden",
+            )
 
     chat_state = gr.State([])
     msg_state = gr.State([])

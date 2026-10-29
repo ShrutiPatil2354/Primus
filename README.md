@@ -166,26 +166,34 @@ read, migrate, or replace `data/primus_memory.db`. Decay and consolidation are
 manual in the UI. The replay daemon is a separate API and only runs if a caller
 explicitly starts it.
 
-These helpers are early prototypes. MuJoCo G1/MJX training, cloud perception
-and planning services, and ROS 2 integration are tracked separately in
-`IMPLEMENTATION_STATUS.md` and are not part of the current runtime.
+These helpers are early prototypes. MJX training, cloud perception and
+planning services, and ROS 2 integration are tracked separately in
+`IMPLEMENTATION_STATUS.md` and are not started by the main UI.
 
 ## Full reference companion app
 
 The complete reference module package is also available under `primus/` with
 its cognition integration, camera/detection stack, object and people memory,
-voice components, and scene helpers. To launch its separate visual companion
-UI without changing the default zPrimus app, run:
+voice components, and scene helpers. The main dashboard includes these visual
+features in the **Reference Simulator** tab at the same local URL; select the
+tab to start its viewer, and leave the tab to stop its camera/simulation loop.
+The existing Workspace tab remains the first page. Start the dashboard with
+`run.ps1` as usual.
+
+The reference viewer can still be launched by itself when a separate window is
+preferred:
 
 ```powershell
 .\.venv\Scripts\python.exe .\reference_app.py
 ```
 
-It uses port 7862 by default (`PRIMUS_REFERENCE_PORT` can change it). The
-microphone agent is disabled by default; enable it explicitly with
-`$env:PRIMUS_REFERENCE_VOICE = "1"` before launching. If that voice loop needs
-an audio device package, install `requirements-reference.txt` into the same
-virtual environment. `PRIMUS_REFERENCE_COGNITION=1` optionally adds the
+The standalone viewer uses port 7862 by default (`PRIMUS_REFERENCE_PORT` can
+change it). In the combined dashboard, the Reference Simulator tab has
+explicit Start/Stop voice controls; the microphone never starts automatically.
+In the standalone app, voice is also opt-in and can be started automatically
+with `$env:PRIMUS_REFERENCE_VOICE = "1"`. If the voice loop needs an audio
+device package, install `requirements-reference.txt` into the same virtual
+environment. `PRIMUS_REFERENCE_COGNITION=1` optionally adds the
 reference cognition hooks to default-app conversation turns while retaining
 the existing knowledge gate.
 
