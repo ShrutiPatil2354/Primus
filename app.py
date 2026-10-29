@@ -1,5 +1,7 @@
+import base64
 import socket
 import os
+import tempfile
 import gradio as gr
 
 from src.ui import theme
@@ -106,14 +108,138 @@ def begin_chat_turn(message, display_history):
     return history, "", message
 
 
-def begin_voice_turn(display_history):
-    """Show voice input immediately while its transcript is being prepared."""
-    history = list(display_history or [])
-    history.extend([
-        {"role": "user", "content": "Voice question (transcribing…)"},
-        {"role": "assistant", "content": "Thinking…"},
-    ])
-    return history, "", ""
+def transcribe_voice_capture(encoded_audio, display_history):
+    """Decode an auto-stopped browser recording and show its transcript."""
+    if not encoded_audio:
+        raise gr.Error("No voice audio was captured. Click the microphone and try again.")
+    if encoded_audio.startswith("PRIMUS_VOICE_ERROR:"):
+        raise gr.Error(encoded_audio.partition(":")[2])
+
+    mime_type, separator, audio_payload = encoded_audio.partition("::")
+    if not separator:
+        audio_payload = encoded_audio
+    try:
+        audio_bytes = base64.b64decode(audio_payload, validate=True)
+    except (ValueError, TypeError) as error:
+        raise gr.Error("The voice recording could not be read. Please try again.") from error
+    if not audio_bytes or len(audio_bytes) > 12 * 1024 * 1024:
+        raise gr.Error("The voice recording was empty or too large. Please try again.")
+
+    audio_path = None
+    extension = (
+        ".m4a" if "mp4" in mime_type else
+        ".ogg" if "ogg" in mime_type else
+        ".webm"
+    )
+    try:
+        with tempfile.NamedTemporaryFile(
+            prefix="primus_voice_", suffix=extension, delete=False
+        ) as audio_file:
+            audio_file.write(audio_bytes)
+            audio_path = audio_file.name
+        transcript = handlers.audio.transcribe(audio_path)
+        if not transcript:
+            raise gr.Error("I couldn't recognize speech. Click the microphone and try again.")
+        history = list(display_history or [])
+        history.extend([
+            {"role": "user", "content": transcript},
+            {"role": "assistant", "content": "Thinking…"},
+        ])
+        return history, transcript
+    finally:
+        if audio_path and os.path.exists(audio_path):
+            os.unlink(audio_path)
+
+
+VOICE_CAPTURE_JS = r"""
+async (unused_payload, history) => {
+  const button = document.querySelector("#voice-input-button button");
+  const buttonRoot = document.querySelector("#voice-input-button");
+  const originalLabel = button ? button.textContent : "🎙";
+  const setLabel = (value) => { if (button) button.textContent = value; };
+  let stream;
+  let context;
+  let recorder;
+  let stopTimer;
+  try {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      throw new Error("This browser does not support microphone recording.");
+    }
+    setLabel("●");
+    buttonRoot?.classList.add("recording");
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+    const supported = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    const mimeType = supported.find((type) => MediaRecorder.isTypeSupported(type));
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    context = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    context.createMediaStreamSource(stream).connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+    const chunks = [];
+    const startedAt = Date.now();
+    let lastVoiceAt = startedAt;
+    let heardVoice = false;
+    let noSpeech = false;
+    const stopped = new Promise((resolve, reject) => {
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size) chunks.push(event.data);
+      };
+      recorder.onerror = () => reject(new Error("The microphone recording failed."));
+      recorder.onstop = resolve;
+      recorder.start(250);
+      stopTimer = setInterval(() => {
+        analyser.getByteTimeDomainData(samples);
+        let total = 0;
+        for (const sample of samples) {
+          const value = (sample - 128) / 128;
+          total += value * value;
+        }
+        const rms = Math.sqrt(total / samples.length);
+        const now = Date.now();
+        if (rms > 0.02) {
+          heardVoice = true;
+          lastVoiceAt = now;
+        }
+        if ((heardVoice && now - lastVoiceAt > 1500) ||
+            (!heardVoice && now - startedAt > 8000) ||
+            now - startedAt > 30000) {
+          noSpeech = !heardVoice;
+          clearInterval(stopTimer);
+          recorder.stop();
+        }
+      }, 100);
+    });
+    await stopped;
+    clearInterval(stopTimer);
+    if (noSpeech || !chunks.length) {
+      throw new Error("No speech detected. Click the microphone and try again.");
+    }
+    const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`, history];
+  } catch (error) {
+    return [`PRIMUS_VOICE_ERROR:${error.message || error}`, history];
+  } finally {
+    if (stopTimer) clearInterval(stopTimer);
+    if (recorder && recorder.state !== "inactive") {
+      try { recorder.stop(); } catch (_) {}
+    }
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    if (context && context.state !== "closed") {
+      try { await context.close(); } catch (_) {}
+    }
+    buttonRoot?.classList.remove("recording");
+    setLabel(originalLabel);
+  }
+}
+"""
 
 
 def create_agent_and_refresh(name, domain, instructions):
@@ -338,20 +464,6 @@ with gr.Blocks(
                                 elem_classes=["chatgpt-send-btn"],
                                 scale=0,
                                 min_width=40,
-                            )
-
-                        with gr.Row(
-                            visible=False,
-                            elem_id="voice-recorder-panel",
-                            elem_classes=["voice-recorder-panel"],
-                        ) as voice_recorder_panel:
-                            audio_in = gr.Audio(
-                                sources=["microphone"],
-                                type="filepath",
-                                label="Record a voice question",
-                                show_label=False,
-                                elem_classes=["voice-recorder"],
-                                scale=1,
                             )
 
                         with gr.Row(elem_classes=["voice-reply-row"]):
@@ -901,6 +1013,8 @@ with gr.Blocks(
     chat_state = gr.State([])
     msg_state = gr.State([])
     pending_chat_text = gr.State("")
+    voice_payload_state = gr.State("")
+    no_audio_state = gr.State(None)
 
     OUTPUTS = [
         chatbot,
@@ -1110,7 +1224,7 @@ with gr.Blocks(
             handlers.process_input,
             inputs=[
                 pending_chat_text,
-                audio_in,
+                no_audio_state,
                 chat_state,
                 msg_state,
                 agent_select,
@@ -1136,18 +1250,11 @@ with gr.Blocks(
         show_progress="hidden",
     ))
 
-    voice_input_btn.click(
-        lambda: gr.update(visible=True),
-        outputs=[voice_recorder_panel],
-        show_progress="hidden",
-    )
-
-
     doc_upload_box.upload(
         handlers.process_input,
         inputs=[
             msg,
-            audio_in,
+            no_audio_state,
             chat_state,
             msg_state,
             agent_select,
@@ -1159,41 +1266,28 @@ with gr.Blocks(
         outputs=OUTPUTS,
     )
 
-    def _finish_voice_turn(event):
-        response_event = event.then(
-            handlers.process_input,
-            inputs=[
-                pending_chat_text,
-                audio_in,
-                chat_state,
-                msg_state,
-                agent_select,
-                use_camera_context,
-                chat_mode,
-                doc_upload_box,
-                use_audio_output,
-            ],
-            outputs=OUTPUTS,
-        )
-        return response_event.then(
-            lambda: gr.update(visible=False),
-            outputs=[voice_recorder_panel],
-            show_progress="hidden",
-        )
-
-    _finish_voice_turn(audio_in.stop_recording(
-        begin_voice_turn,
-        inputs=[chatbot],
-        outputs=[chatbot, msg, pending_chat_text],
+    voice_capture = voice_input_btn.click(
+        transcribe_voice_capture,
+        inputs=[voice_payload_state, chatbot],
+        outputs=[chatbot, pending_chat_text],
+        js=VOICE_CAPTURE_JS,
         show_progress="hidden",
-    ))
-
-    _finish_voice_turn(audio_in.upload(
-        begin_voice_turn,
-        inputs=[chatbot],
-        outputs=[chatbot, msg, pending_chat_text],
-        show_progress="hidden",
-    ))
+    )
+    voice_capture.then(
+        handlers.process_input,
+        inputs=[
+            pending_chat_text,
+            no_audio_state,
+            chat_state,
+            msg_state,
+            agent_select,
+            use_camera_context,
+            chat_mode,
+            doc_upload_box,
+            use_audio_output,
+        ],
+        outputs=OUTPUTS,
+    )
 
     chatbot.clear(
         handlers.clear_session,

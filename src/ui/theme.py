@@ -1827,19 +1827,23 @@ CSS += r"""
     font-size: 19px !important;
     padding: 0 !important;
 }
-.voice-input-button:hover {
+.voice-input-button button {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: #10213a !important;
+    color: #e7f2ff !important;
+}
+.voice-input-button button:hover {
     background: #173253 !important;
     border-color: #38bdf8 !important;
 }
-.voice-recorder-panel {
-    margin: 10px 8px 0 !important;
-    padding: 12px !important;
-    border: 1px solid #294362 !important;
-    border-radius: 14px !important;
-    background: #0b1424 !important;
-}
-.voice-recorder-panel button {
-    min-height: 36px !important;
+#voice-input-button.recording button {
+    background: #3b1720 !important;
+    border-color: #ef4444 !important;
+    color: #f87171 !important;
 }
 
 
