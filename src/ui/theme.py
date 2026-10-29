@@ -405,6 +405,40 @@ select:focus-visible,
     margin-top: 3px;
 }}
 
+#sidebar-agent-picker .wrap {{
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    max-height: 510px;
+    overflow-y: auto;
+    padding-right: 3px;
+}}
+
+#sidebar-agent-picker label {{
+    align-items: center !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 9px !important;
+    color: {TEXT_PRIMARY} !important;
+    cursor: pointer !important;
+    font-size: .78rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    padding: 9px !important;
+    transition: background .15s ease, border-color .15s ease;
+}}
+
+#sidebar-agent-picker label:hover,
+#sidebar-agent-picker label:has(input:checked) {{
+    background: rgba(56, 189, 248, .08) !important;
+    border-color: rgba(56, 189, 248, .32) !important;
+}}
+
+#sidebar-agent-picker input[type="radio"] {{
+    accent-color: {ACCENT_BLUE} !important;
+    margin-right: 8px !important;
+}}
+
 .sidebar-tip {{
     display: flex;
     flex-direction: column;

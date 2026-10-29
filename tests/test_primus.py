@@ -188,10 +188,10 @@ class TestUIHandlersAndAgentSelection(unittest.TestCase):
         STORE.add_agent_skill("finance_agent", "Audit Expenses", ["check receipts", "verify approvals"])
         STORE.add_agent_document("finance_agent", "tax_guide.pdf", "Tax rates for 2026")
         
-        # Test sidebar renders
+        # Native sidebar selector exposes each agent as a selectable option.
         sb = handlers.sidebar_agents_html("finance_agent")
-        self.assertIn("FINANCE AGENT", sb.upper())
-        self.assertIn("sidebar-agent-item", sb)
+        self.assertEqual(sb["value"], "finance_agent")
+        self.assertTrue(any(value == "finance_agent" for _label, value in sb["choices"]))
         
         # Test clear active agent knowledge
         res = handlers.clear_active_agent_knowledge("finance_agent")

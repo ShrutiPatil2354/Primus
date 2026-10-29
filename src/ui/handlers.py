@@ -199,34 +199,9 @@ def agent_manager_html(agent_id=None):
 
 
 def sidebar_agents_html(selected_agent_id=None):
+    """Return live agent options for the clickable workspace sidebar radio."""
     selected_agent_id = (selected_agent_id or "").strip()
-    agents = STORE.list_agents()
-    st = memory.stats()
-    default_active = " active" if not selected_agent_id else ""
-    icons = ["💼", "⚖", "⚙", "👤", "👥", "📖", "📈", "🤖"]
-    colors = ["#ec4899", "#a855f7", "#3b82f6", "#06b6d4", "#8b5cf6", "#f97316", "#10b981", "#64748b"]
-    items = [
-        f'''<div class="agent-nav-item sidebar-agent-item{default_active}" data-agent-id="default" style="cursor: pointer;">
-          <span class="agent-avatar-icon globe">🌐</span>
-          <div class="agent-nav-info">
-            <div class="agent-nav-name">Default Memory (Shared)</div>
-            <div class="agent-nav-meta">{st['skills']} skills · {st['facts']} facts · {st['episodes']} events</div>
-          </div>
-        </div>'''
-    ]
-    for idx, agent in enumerate(agents):
-        is_active = " active" if agent["id"] == selected_agent_id else ""
-        stats = STORE.agent_stats(agent["id"])
-        icon = icons[idx % len(icons)]
-        color = colors[idx % len(colors)]
-        items.append(f'''<div class="agent-nav-item sidebar-agent-item{is_active}" data-agent-id="{agent['id']}" style="cursor: pointer;">
-          <span class="agent-avatar-icon" style="background:{color}22;color:{color};border:1px solid {color}44;">{icon}</span>
-          <div class="agent-nav-info">
-            <div class="agent-nav-name">{html.escape(agent["name"])}</div>
-            <div class="agent-nav-meta">{html.escape(agent["domain"])} · {stats["skills"]} tasks · {stats.get("documents", 0)} docs</div>
-          </div>
-        </div>''')
-    return f'<div class="agent-sidebar-list">{"".join(items)}</div>'
+    return gr.update(choices=agent_choices(), value=selected_agent_id)
 
 
 def clear_active_agent_knowledge(agent_id):

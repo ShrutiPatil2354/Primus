@@ -93,6 +93,19 @@ def clear_chat_ui(agent_id=None):
     return handlers.clear_session(agent_id)
 
 
+def begin_chat_turn(message, display_history):
+    """Show the user's message and a thinking placeholder before inference."""
+    message = (message or "").strip()
+    history = list(display_history or [])
+    if not message:
+        return history, message, ""
+    history.extend([
+        {"role": "user", "content": message},
+        {"role": "assistant", "content": "Thinking…"},
+    ])
+    return history, "", message
+
+
 def create_agent_and_refresh(name, domain, instructions):
     result = handlers.create_agent(name, domain, instructions)
     # Existing handler returns:
@@ -202,11 +215,14 @@ with gr.Blocks(
                         elem_classes=["sidebar-search-box"],
                     )
 
-                    sidebar_hidden_btn = gr.Button("hidden", elem_id="sidebar_hidden_btn", elem_classes=["hidden-trigger"])
-
-                    sidebar_view = gr.HTML(
-                        handlers.sidebar_agents_html(),
-                        elem_classes=["sidebar-html"],
+                    sidebar_view = gr.Radio(
+                        choices=handlers.agent_choices(),
+                        value="",
+                        label="",
+                        show_label=False,
+                        interactive=True,
+                        elem_id="sidebar-agent-picker",
+                        elem_classes=["sidebar-agent-picker"],
                     )
 
                     gr.HTML("""
@@ -860,6 +876,7 @@ with gr.Blocks(
 
     chat_state = gr.State([])
     msg_state = gr.State([])
+    pending_chat_text = gr.State("")
 
     OUTPUTS = [
         chatbot,
@@ -915,14 +932,14 @@ with gr.Blocks(
             sidebar_view,
         ],
     )
-    # Sidebar click event trigger
-    def _handle_sidebar_click(js_val):
-        updates = handlers.select_agent(js_val)
-        return (js_val,) + updates
+    # Sidebar agent choices use a native Gradio radio control, so they work
+    # without a client-side click bridge and update the same workspace state.
+    def _select_sidebar_agent(agent_id):
+        return (gr.update(value=agent_id),) + handlers.select_agent(agent_id)
 
-    sidebar_hidden_btn.click(
-        _handle_sidebar_click,
-        inputs=[agent_select],
+    sidebar_view.change(
+        _select_sidebar_agent,
+        inputs=[sidebar_view],
         outputs=[
             agent_select,
             agent_overview,
@@ -934,10 +951,7 @@ with gr.Blocks(
             doc_select,
             sidebar_view,
         ],
-        js="(x) => [window.__selected_sidebar_agent]"
     )
-
-
 
     # Select built agent
     existing_agent_select.change(
@@ -1067,37 +1081,36 @@ with gr.Blocks(
     )
 
     # Send message / Enter
-    send_btn.click(
-        handlers.process_input,
-        inputs=[
-            msg,
-            audio_in,
-            chat_state,
-            msg_state,
-            agent_select,
-            use_camera_context,
-            chat_mode,
-            doc_upload_box,
-            use_audio_output,
-        ],
-        outputs=OUTPUTS,
-    )
+    def _finish_visible_chat_turn(event):
+        return event.then(
+            handlers.process_input,
+            inputs=[
+                pending_chat_text,
+                audio_in,
+                chat_state,
+                msg_state,
+                agent_select,
+                use_camera_context,
+                chat_mode,
+                doc_upload_box,
+                use_audio_output,
+            ],
+            outputs=OUTPUTS,
+        )
 
-    msg.submit(
-        handlers.process_input,
-        inputs=[
-            msg,
-            audio_in,
-            chat_state,
-            msg_state,
-            agent_select,
-            use_camera_context,
-            chat_mode,
-            doc_upload_box,
-            use_audio_output,
-        ],
-        outputs=OUTPUTS,
-    )
+    _finish_visible_chat_turn(send_btn.click(
+        begin_chat_turn,
+        inputs=[msg, chatbot],
+        outputs=[chatbot, msg, pending_chat_text],
+        show_progress="hidden",
+    ))
+
+    _finish_visible_chat_turn(msg.submit(
+        begin_chat_turn,
+        inputs=[msg, chatbot],
+        outputs=[chatbot, msg, pending_chat_text],
+        show_progress="hidden",
+    ))
 
 
     doc_upload_box.upload(
@@ -1329,19 +1342,4 @@ if __name__ == "__main__":
         share=False,
         inbrowser=True,
     )
-    # Inject sidebar JS on load
-    demo.load(None, None, None, js="""
-    function() {
-        document.addEventListener("click", function(e) {
-            let target = e.target.closest(".sidebar-agent-item");
-            if (target) {
-                let agentId = target.getAttribute("data-agent-id");
-                if(agentId === "default") agentId = "";
-                window.__selected_sidebar_agent = agentId;
-                let btn = document.querySelector("#sidebar_hidden_btn button") || document.querySelector("#sidebar_hidden_btn");
-                if (btn) btn.click();
-            }
-        });
-    }
-    """)
 
