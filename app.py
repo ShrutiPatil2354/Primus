@@ -111,7 +111,10 @@ def begin_chat_turn(message, display_history):
 def transcribe_voice_capture(encoded_audio, display_history):
     """Decode an auto-stopped browser recording and show its transcript."""
     if not encoded_audio:
-        raise gr.Error("No voice audio was captured. Click the microphone and try again.")
+        # A State.change event can be emitted with an empty initial/reset value
+        # by Gradio. Treat that as an idle mic event; raising here leaves a
+        # stale error toast visible while the user continues typing in chat.
+        return list(display_history or []), ""
     if encoded_audio.startswith("PRIMUS_VOICE_ERROR:"):
         raise gr.Error(encoded_audio.partition(":")[2])
 
@@ -152,7 +155,7 @@ def transcribe_voice_capture(encoded_audio, display_history):
 
 
 VOICE_CAPTURE_JS = r"""
-async () => {
+async (_voicePayload, displayHistory) => {
   const button = document.querySelector("#voice-input-button button");
   const buttonRoot = document.querySelector("#voice-input-button");
   const originalLabel = button ? button.textContent : "🎙";
@@ -223,9 +226,9 @@ async () => {
     for (let offset = 0; offset < bytes.length; offset += 0x8000) {
       binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
     }
-    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`];
+    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`, displayHistory];
   } catch (error) {
-    return [`PRIMUS_VOICE_ERROR:${error.message || error}`];
+    return [`PRIMUS_VOICE_ERROR:${error.message || error}`, displayHistory];
   } finally {
     if (stopTimer) clearInterval(stopTimer);
     if (recorder && recorder.state !== "inactive") {
@@ -1013,7 +1016,7 @@ with gr.Blocks(
     chat_state = gr.State([])
     msg_state = gr.State([])
     pending_chat_text = gr.State("")
-    voice_payload_state = gr.State("")
+    voice_capture_placeholder = gr.State("")
     no_audio_state = gr.State(None)
 
     OUTPUTS = [
@@ -1267,16 +1270,10 @@ with gr.Blocks(
     )
 
     voice_input_btn.click(
-        None,
-        inputs=[],
-        outputs=[voice_payload_state],
-        js=VOICE_CAPTURE_JS,
-        show_progress="hidden",
-    )
-    voice_payload_state.change(
         transcribe_voice_capture,
-        inputs=[voice_payload_state, chatbot],
+        inputs=[voice_capture_placeholder, chatbot],
         outputs=[chatbot, pending_chat_text],
+        js=VOICE_CAPTURE_JS,
         show_progress="hidden",
     ).then(
         handlers.process_input,
