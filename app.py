@@ -328,10 +328,12 @@ with gr.Blocks(
                                 visible=True,
                                 sources=["microphone"],
                                 type="filepath",
+                                label="Record a voice question",
                                 show_label=False,
-                                elem_classes=["compact-audio-input"],
+                                elem_id="voice-input-control",
+                                elem_classes=["compact-audio-input", "voice-input-control"],
                                 scale=0,
-                                min_width=50,
+                                min_width=46,
                             )
                             send_btn = gr.Button(
                                 "\u2191",

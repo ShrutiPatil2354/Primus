@@ -1825,11 +1825,16 @@ CSS += r"""
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 .compact-audio-input > div, .compact-audio-input .wrap {
     border: none !important;
     background: transparent !important;
+    min-height: 46px !important;
+    height: 46px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 .compact-audio-input button {
     min-width: 46px !important;
@@ -1839,6 +1844,16 @@ CSS += r"""
     border-radius: 50% !important;
     background: #0f1c30 !important;
     border: 1px solid #182a46 !important;
+    color: #f1f5f9 !important;
+}
+#voice-input-control {
+    flex: 0 0 46px !important;
+    position: relative !important;
+    z-index: 2;
+}
+#voice-input-control svg {
+    color: #f1f5f9 !important;
+    stroke: currentColor !important;
 }
 .compact-audio-input button:hover {
     background: #142540 !important;
