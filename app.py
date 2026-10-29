@@ -106,6 +106,16 @@ def begin_chat_turn(message, display_history):
     return history, "", message
 
 
+def begin_voice_turn(display_history):
+    """Show voice input immediately while its transcript is being prepared."""
+    history = list(display_history or [])
+    history.extend([
+        {"role": "user", "content": "Voice question (transcribing…)"},
+        {"role": "assistant", "content": "Thinking…"},
+    ])
+    return history, "", ""
+
+
 def create_agent_and_refresh(name, domain, instructions):
     result = handlers.create_agent(name, domain, instructions)
     # Existing handler returns:
@@ -314,7 +324,8 @@ with gr.Blocks(
                             )
 
 
-                            audio_in = gr.Audio(visible=False,
+                            audio_in = gr.Audio(
+                                visible=True,
                                 sources=["microphone"],
                                 type="filepath",
                                 show_label=False,
@@ -1129,37 +1140,36 @@ with gr.Blocks(
         outputs=OUTPUTS,
     )
 
-    audio_in.stop_recording(
-        handlers.process_input,
-        inputs=[
-            msg,
-            audio_in,
-            chat_state,
-            msg_state,
-            agent_select,
-            use_camera_context,
-            chat_mode,
-            doc_upload_box,
-            use_audio_output,
-        ],
-        outputs=OUTPUTS,
-    )
-    
-    audio_in.upload(
-        handlers.process_input,
-        inputs=[
-            msg,
-            audio_in,
-            chat_state,
-            msg_state,
-            agent_select,
-            use_camera_context,
-            chat_mode,
-            doc_upload_box,
-            use_audio_output,
-        ],
-        outputs=OUTPUTS,
-    )
+    def _finish_voice_turn(event):
+        return event.then(
+            handlers.process_input,
+            inputs=[
+                pending_chat_text,
+                audio_in,
+                chat_state,
+                msg_state,
+                agent_select,
+                use_camera_context,
+                chat_mode,
+                doc_upload_box,
+                use_audio_output,
+            ],
+            outputs=OUTPUTS,
+        )
+
+    _finish_voice_turn(audio_in.stop_recording(
+        begin_voice_turn,
+        inputs=[chatbot],
+        outputs=[chatbot, msg, pending_chat_text],
+        show_progress="hidden",
+    ))
+
+    _finish_voice_turn(audio_in.upload(
+        begin_voice_turn,
+        inputs=[chatbot],
+        outputs=[chatbot, msg, pending_chat_text],
+        show_progress="hidden",
+    ))
 
     chatbot.clear(
         handlers.clear_session,
