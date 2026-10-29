@@ -13,6 +13,7 @@ class TestG1Simulation(unittest.TestCase):
         before = sim.snapshot()
         after = sim.step(frames=2)
         self.assertEqual(before["actuator_count"], 29)
+        self.assertGreaterEqual(sim.model.nbody, 31)
         self.assertTrue(after["simulation_only"])
         self.assertGreater(after["time"], before["time"])
 

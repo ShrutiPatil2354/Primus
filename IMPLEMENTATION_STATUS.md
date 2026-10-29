@@ -27,7 +27,8 @@ Updated 2026-10-29.
 - Explicit-input advisory helpers for social/acoustic cues, bounded affect,
   spatial object notes and velocity suggestions, metacognition, proactive
   prompts, developmental counters, toy physiology, social-bond state,
-  pragmatics, demonstration/play/gesture hints, and approximate recall.
+  pragmatics, demonstration/play/gesture hints, approximate recall, and
+  optional PyTorch EWC/skill-adapter utilities.
 
 The cognition modules are not imported into the default chat pipeline. The
 existing Gradio event contract, intent routing, knowledge gate, and voice path
@@ -36,22 +37,31 @@ remain independent of them.
   memory. The default is off; enabling it does not alter existing tabs or
   handlers. Both UI configurations imported successfully.
 - Optional MuJoCo G1 assets and a lazy headless simulation wrapper are under
-  `sim/g1/` and `src/simulation/`. The model loads and steps in this environment;
-  MJX training remains unavailable until its separate JAX stack is installed.
+  `sim/g1/`, `sim/kitchen_g1.xml`, and `src/simulation/`. The G1 kitchen scene
+  loads and steps in this environment; MJX training remains unavailable until
+  its separate JAX stack is installed.
+- Standalone MJX/PPO collection and training, ASTRA, policy export, CEM planning,
+  and lazy cloud perception service sources are now under `cloud/`. The CEM
+  loader was adapted for the trainer's state-dictionary checkpoint format.
+  These scripts are not called by the UI; MJX cannot run in this environment
+  because JAX is absent, and the cloud service has no models here.
+- An optional ROS 2 topic package is under `primus_ros2/`. Its perception node
+  consumes the zPrimus MJPEG stream; its executor explicitly reports the
+  missing motion backend. ROS 2 is not installed in this environment, so this
+  package was not built or run.
 
 ## Remaining feature groups
 
-1. Port standalone MJX/PPO, ASTRA, episode collection, and policy export only
-   after dependency and checkpoint compatibility is established.
-2. Evaluate optional cloud perception/planning services individually. The
-   reference world-model planner and trainer checkpoint format need an adapter
-   before joint use.
-3. Keep ROS 2 and hardware-facing control separate until a validated motion
-   backend and safety design exist.
+1. Validate MJX/PPO, episode collection, ASTRA, and policy export in an isolated
+   JAX-capable environment; the current host cannot run the MJX jobs.
+2. Run the optional cloud perception/planning services with explicit models
+   and service dependencies, then decide whether to add client adapters.
+3. Build and exercise the ROS 2 package in a ROS 2 environment. Keep physical
+   control separate until a validated motion backend and safety design exist.
 
 ## Verification
 
-The original 22-test suite passed after the compatibility fixes. The focused
-cognition tests and full 25-test suite also pass. The app imported successfully
-with the cognition tab both disabled and enabled. New dependencies and
-migrations remain optional, and the default flow is unchanged when disabled.
+The full 28-test suite passes, including the isolated cognition, MuJoCo, and
+ASTRA/CEM checkpoint checks. The app imports successfully with the cognition
+tab both disabled and enabled. All new service integrations remain outside
+the default flow.

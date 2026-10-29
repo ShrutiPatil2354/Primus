@@ -5,7 +5,7 @@ import math
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL = PROJECT_ROOT / "sim" / "g1" / "scene.xml"
+DEFAULT_MODEL = PROJECT_ROOT / "sim" / "kitchen_g1.xml"
 
 
 class G1Simulation:

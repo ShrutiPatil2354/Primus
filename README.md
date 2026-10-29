@@ -157,8 +157,8 @@ before introducing an RL or meta-RL training worker.
 The prototype helpers in `src/cognition/` are isolated from chat, task routing,
 and voice output. They include a separate salience-aware SQLite notebook,
 explicit decay/consolidation/forget operations, and advisory social, spatial,
-affect, metacognition, and behavior helpers. They do not infer validated
-mental states or issue robot actions.
+affect, metacognition, anti-forgetting training utilities, and behavior helpers.
+They do not infer validated mental states or issue robot actions.
 
 To expose the separate memory notebook tab, set `PRIMUS_COGNITION_UI=1` before
 starting the app. Its database is `data/cognitive_memory.sqlite3`; it does not
@@ -172,11 +172,25 @@ and planning services, and ROS 2 integration are tracked separately in
 
 ## Optional G1 simulation
 
-The licensed MJCF assets are under `sim/g1/`. A headless wrapper is available
-through `src.simulation.mujoco_g1.G1Simulation`; it loads the model only when
+The licensed MJCF assets are under `sim/g1/`, with a kitchen scene in
+`sim/kitchen_g1.xml`. A headless wrapper is available through
+`src.simulation.mujoco_g1.G1Simulation`; it loads the scene only when
 constructed and steps MuJoCo simulation state without connecting to hardware.
 The MJX training stack is separate and requires JAX, which is not part of the
 default setup. Rendering also requires a working graphics backend.
+
+Standalone MJX/PPO, episode collection, ASTRA, export, CEM planning, and the
+optional cloud perception service are in `cloud/`. They are not started by
+the application. See `cloud/README.md` for environment requirements and
+integration limits. The current environment does not have JAX, so the MJX
+workflows are not runnable here yet.
+
+## Optional ROS 2 bridges
+
+The separate `primus_ros2/` package relays voice text/status topics and can
+publish the current MJPEG stream as a ROS image topic. Its task executor has no
+motion backend and only reports requests. ROS 2 must be installed separately;
+see `primus_ros2/README.md`. This package is not started by the app.
 
 ## How PRIMUS differs from a typical chatbot
 
