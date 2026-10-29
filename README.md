@@ -176,7 +176,9 @@ The complete reference module package is also available under `primus/` with
 its cognition integration, camera/detection stack, object and people memory,
 voice components, and scene helpers. The main dashboard includes these visual
 features in the **Reference Simulator** tab at the same local URL; select the
-tab to start its viewer, and leave the tab to stop its camera/simulation loop.
+tab to start its viewer. The camera stays active while you use the adjacent
+**Reference Companion** tab and stops when you return to a non-reference tab.
+The Companion tab exposes text conversation and task teaching.
 The existing Workspace tab remains the first page. Start the dashboard with
 `run.ps1` as usual.
 

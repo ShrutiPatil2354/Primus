@@ -786,7 +786,8 @@ with gr.Blocks(
                 "view; the orbit sliders move the kitchen camera. TEACHER needs a "
                 "connected webcam. DETECT needs the webcam and a supported YOLO "
                 "model. Scroll below the viewer for the optional voice controls. "
-                "The simulator starts on this tab and stops when you leave it."
+                "The camera stays active while you use Reference Companion and "
+                "stops when you return to a non-reference tab."
             )
             if reference_ui is not None:
                 reference_timer, reference_viewport, reference_telemetry = reference_ui.render()
@@ -798,6 +799,42 @@ with gr.Blocks(
                     "to enable this tab."
                 )
 
+        with gr.Tab("Reference Companion", id="reference-companion-tab") as companion_tab:
+            gr.Markdown(
+                "## Reference Companion Brain\n"
+                "Try `who are you?`, `learn tea: boil water; steep tea`, then "
+                "`how do I make tea?`. Introductions and object naming use the "
+                "camera when it is running; open Reference Simulator first to "
+                "start the camera. `pick up cup` displays an advisory "
+                "plan only; this chat does not send robot commands."
+            )
+            if reference_ui is not None:
+                companion_history = gr.Chatbot(
+                    label="Conversation",
+                    height=420,
+                )
+                with gr.Row():
+                    companion_message = gr.Textbox(
+                        label="Message",
+                        placeholder="Ask Primus or teach a task...",
+                        scale=5,
+                    )
+                    companion_send = gr.Button("Send", variant="primary", scale=1)
+                companion_send.click(
+                    reference_ui.reference_companion_reply,
+                    inputs=[companion_message, companion_history],
+                    outputs=[companion_history, companion_message],
+                )
+                companion_message.submit(
+                    reference_ui.reference_companion_reply,
+                    inputs=[companion_message, companion_history],
+                    outputs=[companion_history, companion_message],
+                )
+            else:
+                gr.Markdown(
+                    "The reference companion dependencies are unavailable in "
+                    f"this environment: `{reference_ui_import_error}`."
+                )
     # =======================================================================
     # STATE
     # =======================================================================

@@ -151,9 +151,13 @@ Connect or select a camera and microphone, activate the environment, then:
 Open the URL printed by the script (normally <http://127.0.0.1:7860>). The
 existing zPrimus Workspace remains the first tab. The **Reference Simulator**
 tab opens the reference camera and G1 viewer under this same URL; its camera
-and simulation loop start when selected and stop when you switch to another
-tab. The Reference Simulator tab also has explicit Start/Stop voice controls;
-the microphone stays off until Start is clicked.
+and simulation loop start when selected and stay active in the adjacent
+Reference Companion tab so the brain can use the camera. They stop when you
+switch to a non-reference tab. The Reference Simulator tab has explicit Start/Stop voice controls;
+the microphone stays off until Start is clicked. The **Reference Companion**
+tab accepts text conversation and task teaching. Try `learn tea: boil water;
+steep tea`, followed by `how do I make tea?`. Action requests show an advisory
+plan and are not sent to ROS or a robot.
 
 To launch only the reference viewer on its own port instead, use another
 PowerShell window:

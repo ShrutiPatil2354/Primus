@@ -1,4 +1,5 @@
 import gradio as gr
+import re
 import threading
 
 from primus.cams import Cams, FEEDS
@@ -8,6 +9,10 @@ _CAMERA_LOCK = threading.Lock()
 _C = None
 _VOICE_LOCK = threading.Lock()
 _VOICE_RUNNING = False
+_ACTION_REQUEST = re.compile(
+    r'\b(?:find|locate|pick(?:\s+up)?|grab|place|put|sit|stand)\b',
+    re.IGNORECASE,
+)
 
 
 def _get_cams():
@@ -319,6 +324,45 @@ def stop_voice():
         finally:
             _VOICE_RUNNING = False
     return 'Voice companion stopped.'
+
+
+def reference_companion_reply(message, history):
+    """Run documented reference-brain chat; action plans are display-only."""
+    history = list(history or [])
+    message = (message or '').strip()
+    if not message:
+        return history, ''
+
+    try:
+        if _ACTION_REQUEST.search(message):
+            from primus.skills_action import parse_action
+
+            plan = parse_action(message)
+            if plan:
+                lines = [
+                    f"{index}. {step['prim']}"
+                    + (f" {step['obj']}" if step.get('obj') else '')
+                    + (f" -> {step['target']}" if step.get('target') else '')
+                    for index, step in enumerate(plan, start=1)
+                ]
+                reply = (
+                    'Advisory plan only; no ROS command or robot action was sent.\n'
+                    + '\n'.join(lines)
+                )
+            else:
+                reply = 'I could not form an advisory plan from that request.'
+        else:
+            from primus.brain import think
+
+            reply = think(message)
+    except Exception as error:
+        reply = f'Reference brain error: {error}'
+
+    history.extend([
+        {'role': 'user', 'content': message},
+        {'role': 'assistant', 'content': str(reply)},
+    ])
+    return history, ''
 
 
 def render():

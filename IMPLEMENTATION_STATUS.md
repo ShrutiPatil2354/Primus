@@ -11,10 +11,11 @@ Updated 2026-10-29 on `feature/reference-architecture`.
 - Existing local databases and model files were not migrated or rewritten.
 - The original zPrimus chat/UI flow remains the default and first tab. The
   reference viewer is available in a **Reference Simulator** tab on the same
-  local URL; it starts on tab selection and shuts down when another tab is
-  selected. `reference_app.py` remains available as a standalone viewer on
-  port 7862. Reference cognition enters the zPrimus chat flow only when
-  `PRIMUS_REFERENCE_COGNITION=1`.
+  local URL; it starts on tab selection and stays active in **Reference
+  Companion** so camera context can be used there. It shuts down when a
+  non-reference tab is selected. `reference_app.py` remains available as a
+  standalone viewer on port 7862. Reference cognition enters the zPrimus chat
+  flow only when `PRIMUS_REFERENCE_COGNITION=1`.
 
 ## Added feature groups
 
@@ -43,7 +44,8 @@ Updated 2026-10-29 on `feature/reference-architecture`.
   builder closes its temporary file before MuJoCo loads it.
 - The optional reference voice imports audio dependencies lazily while keeping
   patchable module symbols for its tests.
-- All 82 tests pass. The combined UI exposes both tab surfaces and checks the
+- All 84 tests pass. The combined UI exposes the existing workspace, simulator,
+  and companion chat surfaces and checks the
   viewer's lazy start/stop lifecycle and opt-in microphone controls. The
   reference viewer builds under a mocked camera object,
   and the default app builds with the Cognition Lab both disabled and enabled.

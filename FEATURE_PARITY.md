@@ -6,9 +6,9 @@ the companion stack and hardware-adjacent pieces are isolated and opt-in.
 
 | Reference area | Added in Primus | How to access it / current limit |
 |---|---|---|
-| Voice companion, brain, teaching, object naming, people memory, social awareness | `primus/agent.py`, `brain.py`, `ears.py`, `mouth.py`, `objects.py`, `people.py`, `social_awareness.py` and related modules | The same main URL includes a **Reference Simulator** tab with explicit Start/Stop voice controls and camera/simulation viewing. `reference_app.py` remains a standalone option. `PRIMUS_REFERENCE_VOICE=1` starts voice automatically in that standalone app. |
+| Voice companion, brain, teaching, object naming, people memory, social awareness | `primus/agent.py`, `brain.py`, `ears.py`, `mouth.py`, `objects.py`, `people.py`, `social_awareness.py` and related modules | The same main URL has **Reference Simulator** and **Reference Companion** tabs. The companion tab supports text chat and task teaching; action requests display advisory plans only. The simulator tab has explicit Start/Stop voice controls. `reference_app.py` remains a standalone option. |
 | Cognition sessions 1–9 | Full source package under `primus/`, plus `docs/HUMAN_BEHAVIOR.md` and the reference tests | Set `PRIMUS_REFERENCE_COGNITION=1` to add the cognition prompt/memory hooks to default-app conversation turns. Heuristics remain advisory and use explicit inputs. |
-| G1 MuJoCo, kitchen, generated room, camera/rendering | `sim/g1/`, `sim/kitchen_g1.xml`, `primus/scene_builder.py`, `room.py`, `cams.py`, `render.py`, plus `src/simulation/` | Select **Reference Simulator** in the main dashboard, or use the headless `G1Simulation`. The viewer is stopped when another main tab is selected. No physical actuation is included. |
+| G1 MuJoCo, kitchen, generated room, camera/rendering | `sim/g1/`, `sim/kitchen_g1.xml`, `primus/scene_builder.py`, `room.py`, `cams.py`, `render.py`, plus `src/simulation/` | Select **Reference Simulator** in the main dashboard, or use the headless `G1Simulation`. The camera stays active in **Reference Companion** and stops on other main tabs. No physical actuation is included. |
 | MJX/PPO, episode collection, ASTRA, export, world-model CEM | `cloud/` including training, collection, serving, and shell scripts | Standalone only. JAX is absent here, so MJX training cannot run in this environment. The CEM loader accepts the ASTRA trainer checkpoint. |
 | Cloud speech, depth, person embeddings, YOLO service | `cloud/svc_percept.py`, model download and serve scripts | Model files and service dependencies are not bundled; it is not connected to the default local perception path. |
 | ROS 2 camera, brain, and executor topics | `primus_ros2/` | Requires a ROS 2 environment. The executor reports that no motion backend is configured. |
@@ -25,7 +25,7 @@ are included instead.
 
 ## Verification on this workstation
 
-- `python -m unittest discover -s tests`: 82 tests pass.
+- `python -m unittest discover -s tests`: 84 tests pass.
 - The default zPrimus app imports with the Cognition Lab disabled and enabled.
 - The combined dashboard serves the existing Workspace and Reference Simulator
   tabs together at one URL. The reference camera remains idle until its tab is
