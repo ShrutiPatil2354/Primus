@@ -10,9 +10,18 @@ _C = None
 _VOICE_LOCK = threading.Lock()
 _VOICE_RUNNING = False
 _ACTION_REQUEST = re.compile(
-    r'\b(?:find|locate|pick(?:\s+up)?|grab|place|put|sit|stand)\b',
+    r'\b(?:find|locate|pick(?:\s+up)?|grab|place|put|sit|stand|wave|'
+    r'reach|raise\s+arms|perform|execute|run)\b',
     re.IGNORECASE,
 )
+_LEARNED_SIM_TASKS = {
+    'stand': 'stand',
+    'return to stand': 'stand',
+    'raise arms': 'raise_arms',
+    'reach': 'reach',
+    'reach forward': 'reach',
+    'wave': 'wave',
+}
 
 
 def _get_cams():
@@ -326,35 +335,80 @@ def stop_voice():
     return 'Voice companion stopped.'
 
 
+def request_g1_demo(task_name):
+    """Queue one of the explicitly supported simulated G1 arm demos."""
+    try:
+        _get_cams().request_task(task_name)
+    except Exception as error:
+        return f'Simulation task was not queued: {error}'
+    labels = {
+        'stand': 'Return to stand',
+        'raise_arms': 'Raise arms',
+        'reach': 'Reach forward',
+        'wave': 'Wave',
+    }
+    return f"Queued '{labels.get(task_name, task_name)}' in MuJoCo simulation."
+
+
 def reference_companion_reply(message, history):
-    """Run documented reference-brain chat; action plans are display-only."""
+    """Handle companion chat through the same zero-prior gate as Workspace."""
     history = list(history or [])
     message = (message or '').strip()
     if not message:
         return history, ''
 
     try:
-        if _ACTION_REQUEST.search(message):
-            from primus.skills_action import parse_action
+        is_learning = bool(re.match(
+            r'^(?:learn|teach(?:\s+me)?|remember)\b', message, re.IGNORECASE
+        ))
+        if _ACTION_REQUEST.search(message) and not is_learning:
+            from src.core import memory
 
-            plan = parse_action(message)
-            if plan:
-                lines = [
-                    f"{index}. {step['prim']}"
-                    + (f" {step['obj']}" if step.get('obj') else '')
-                    + (f" -> {step['target']}" if step.get('target') else '')
-                    for index, step in enumerate(plan, start=1)
-                ]
+            _skill_id, skill = memory.find_skill(message)
+            if skill:
+                skill_name = re.sub(
+                    r'[^a-z]+', ' ', skill.get('name', '').lower()
+                ).strip()
+                sim_task = _LEARNED_SIM_TASKS.get(skill_name)
+                if sim_task:
+                    try:
+                        _get_cams().request_task(sim_task)
+                        reply = (
+                            f"Running your learned '{skill.get('name')}' skill as a "
+                            'scripted MuJoCo simulation demo. No hardware or object '
+                            'manipulation is involved.'
+                        )
+                    except Exception as error:
+                        reply = f"Could not start the MuJoCo demo: {error}"
+                    history.extend([
+                        {'role': 'user', 'content': message},
+                        {'role': 'assistant', 'content': reply},
+                    ])
+                    return history, ''
+                steps = '\n'.join(
+                    f"{index}. {step}"
+                    for index, step in enumerate(skill.get('steps', []), start=1)
+                )
                 reply = (
-                    'Advisory plan only; no ROS command or robot action was sent.\n'
-                    + '\n'.join(lines)
+                    f"I know this only because you taught '{skill.get('name', 'this task')}'.\n"
+                    'Advisory only; no robot action was sent.\n' + steps
                 )
             else:
-                reply = 'I could not form an advisory plan from that request.'
+                reply = (
+                    "I cannot perform that. Default Memory has no prior knowledge or learned skill for it.\n"
+                    'Teach me first with: Learn <task>: <step 1>; <step 2>; <step 3>'
+                )
         else:
-            from primus.brain import think
+            from src.ui.handlers import process_input
 
-            reply = think(message)
+            mode = 'Learn Mode' if is_learning else 'Ask Mode'
+            result = process_input(
+                message, None, history, [], agent_id=None,
+                use_camera_context=False, chat_mode=mode,
+                doc_file=None, use_audio_output=False,
+            )
+            history = result[0]
+            return history, ''
     except Exception as error:
         reply = f'Reference brain error: {error}'
 
@@ -390,6 +444,25 @@ def render():
                         inputs=[azimuth, elevation, distance],
                         outputs=None,
                     )
+
+        gr.Markdown(
+            '### G1 task demos (MuJoCo only)\n'
+            'These scripted, bounded arm motions do not walk, grasp, or control hardware.'
+        )
+        task_status = gr.Markdown('Choose a simulation demo.')
+        with gr.Row():
+            for label, task_name in (
+                ('Return to stand', 'stand'),
+                ('Raise arms', 'raise_arms'),
+                ('Reach forward', 'reach'),
+                ('Wave', 'wave'),
+            ):
+                gr.Button(label).click(
+                    request_g1_demo,
+                    inputs=gr.State(task_name),
+                    outputs=[task_status],
+                    show_progress='hidden',
+                )
 
         viewport = gr.Image(
             elem_id='viewport',

@@ -805,8 +805,10 @@ with gr.Blocks(
                 "Try `who are you?`, `learn tea: boil water; steep tea`, then "
                 "`how do I make tea?`. Introductions and object naming use the "
                 "camera when it is running; open Reference Simulator first to "
-                "start the camera. `pick up cup` displays an advisory "
-                "plan only; this chat does not send robot commands."
+                "start the camera. To move G1 in MuJoCo, teach a supported demo "
+                "such as `Learn wave: raise the right arm; move the wrist side to side`, "
+                "then say `perform wave`. This runs a scripted simulation motion; "
+                "walking, grasping, and object pickup are not implemented."
             )
             if reference_ui is not None:
                 companion_history = gr.Chatbot(

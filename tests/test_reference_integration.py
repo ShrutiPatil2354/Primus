@@ -221,28 +221,53 @@ class TestCombinedPrimusUI(unittest.TestCase):
             any((companion_tab_id, "select") in event["targets"] for event in stop_events)
         )
 
-    def test_companion_tab_supports_text_brain_chat(self):
+    def test_companion_tab_uses_workspace_zero_prior_chat_gate(self):
         import primus.ui as ui
 
-        with mock.patch("primus.brain.think", return_value="Hello from Primus.") as think:
+        expected_history = [
+            {"role": "user", "content": "Who are you?"},
+            {"role": "assistant", "content": "Hello from Primus."},
+        ]
+        with mock.patch(
+            "src.ui.handlers.process_input", return_value=(expected_history,)
+        ) as process_input:
             history, cleared_input = ui.reference_companion_reply("Who are you?", [])
-        think.assert_called_once_with("Who are you?")
+        self.assertEqual(process_input.call_args.args[:4], ("Who are you?", None, [], []))
+        self.assertEqual(process_input.call_args.kwargs["chat_mode"], "Ask Mode")
         self.assertEqual(cleared_input, "")
         self.assertEqual(history[-1]["content"], "Hello from Primus.")
 
-    def test_companion_action_request_is_advisory_and_never_sent_to_ros(self):
+    def test_companion_unknown_action_is_refused_without_planning_or_ros(self):
         import primus.ui as ui
 
-        with mock.patch(
-            "primus.skills_action.parse_action",
-            return_value=[{"prim": "reach", "obj": "cup", "target": None}],
-        ) as parse_action:
-            with mock.patch("primus.brain.think") as think:
+        with mock.patch("src.core.memory.find_skill", return_value=(None, None)):
+            with mock.patch("primus.skills_action.parse_action") as parse_action:
                 history, _ = ui.reference_companion_reply("pick up cup", [])
-        parse_action.assert_called_once_with("pick up cup")
-        think.assert_not_called()
-        self.assertIn("plan only", history[-1]["content"])
-        self.assertIn("no ROS command", history[-1]["content"])
+        parse_action.assert_not_called()
+        self.assertIn("no prior knowledge", history[-1]["content"])
+
+    def test_companion_learn_request_enters_learn_mode(self):
+        import primus.ui as ui
+
+        expected_history = [
+            {"role": "user", "content": "Learn wave: raise arm; wave wrist"},
+            {"role": "assistant", "content": "Skill learned."},
+        ]
+        with mock.patch(
+            "src.ui.handlers.process_input", return_value=(expected_history,)
+        ) as process_input:
+            ui.reference_companion_reply("Learn wave: raise arm; wave wrist", [])
+        self.assertEqual(process_input.call_args.kwargs["chat_mode"], "Learn Mode")
+
+    def test_companion_runs_only_a_learned_supported_simulation_skill(self):
+        import primus.ui as ui
+
+        skill = {"name": "wave", "steps": ["raise the arm", "wave the wrist"]}
+        with mock.patch("src.core.memory.find_skill", return_value=("wave", skill)):
+            with mock.patch.object(ui, "_get_cams") as get_cams:
+                history, _ = ui.reference_companion_reply("perform wave", [])
+        get_cams.return_value.request_task.assert_called_once_with("wave")
+        self.assertIn("MuJoCo simulation demo", history[-1]["content"])
 
     def test_microphone_loop_is_explicit_and_reports_missing_device(self):
         import primus.ears as ears

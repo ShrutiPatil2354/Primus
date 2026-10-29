@@ -182,6 +182,16 @@ The Companion tab exposes text conversation and task teaching.
 The existing Workspace tab remains the first page. Start the dashboard with
 `run.ps1` as usual.
 
+The Reference Simulator also exposes small, scripted G1 arm demos: return to
+stand, raise arms, reach forward, and wave. These run in the MuJoCo render loop.
+In Reference Companion, teach one of those supported task names first (for
+example, `Learn wave: raise the right arm; move the wrist side to side`), then
+ask it to `perform wave` to run that mapped simulation demo. The learned name
+must match a supported demo; other taught steps remain advisory. This does not
+yet provide walking, grasping, object pickup, or a trained locomotion policy.
+These controls only affect the local MuJoCo simulation and are not a hardware
+controller.
+
 The reference viewer can still be launched by itself when a separate window is
 preferred:
 

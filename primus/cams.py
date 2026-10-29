@@ -1,4 +1,5 @@
 import logging
+import queue
 import threading
 import time
 
@@ -40,6 +41,7 @@ class Cams:
         self._frame_sequence = 0
         self._lock = threading.RLock()
         self._stop = threading.Event()
+        self._task_requests = queue.Queue()
         self._render_thread = threading.Thread(
             target=self._render_loop, daemon=True, name='primus-render'
         )
@@ -77,21 +79,23 @@ class Cams:
             import mujoco
 
             sim = Sim()
-            torso_id = mujoco.mj_name2id(
-                sim.m, mujoco.mjtObj.mjOBJ_BODY, 'torso_link'
-            )
-            if torso_id < 0:
-                torso_id = mujoco.mj_name2id(
-                    sim.m, mujoco.mjtObj.mjOBJ_BODY, 'torso'
-                )
             last, count = time.monotonic(), 0
             secondary_cameras = ['room', 'g1_eye', 'g1_body']
             secondary_index = 0
             while not self._stop.is_set():
                 started = time.monotonic()
-                if torso_id >= 0:
-                    sim.d.xfrc_applied[torso_id, 2] = 80.0
-                mujoco.mj_step(sim.m, sim.d)
+                while True:
+                    try:
+                        task_name = self._task_requests.get_nowait()
+                    except queue.Empty:
+                        break
+                    try:
+                        sim.start_task(task_name)
+                    except ValueError as error:
+                        LOGGER.warning('Rejected MuJoCo task request: %s', error)
+                sim.advance_task()
+                for _ in range(20):
+                    mujoco.mj_step(sim.m, sim.d)
                 rendered = {'kitchen': sim.orbit(*self.orbit)}
                 camera = secondary_cameras[secondary_index]
                 rendered[camera] = sim.named(camera)
@@ -132,6 +136,17 @@ class Cams:
                     sim.close()
                 except Exception:
                     LOGGER.exception('Could not close the MuJoCo renderer')
+
+    def request_task(self, task_name):
+        """Queue an allow-listed, scripted task for the MuJoCo sim thread."""
+        allowed = {'stand', 'raise_arms', 'reach', 'wave'}
+        if task_name not in allowed:
+            raise ValueError(f'Unsupported simulation demo: {task_name}')
+        if self.render_error:
+            raise RuntimeError(f'MuJoCo viewer is unavailable: {self.render_error}')
+        if not self._render_thread.is_alive():
+            raise RuntimeError('MuJoCo simulation is not running; reopen the Reference Simulator tab.')
+        self._task_requests.put(task_name)
 
     def _warmup_detection(self, frame):
         try:

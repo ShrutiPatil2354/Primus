@@ -1,7 +1,6 @@
 import logging
 import threading
 
-from primus.brain import think
 from primus.ears import Ears
 from primus.mouth import Mouth
 
@@ -14,6 +13,7 @@ _thread = None
 
 def _loop():
     ears, mouth = Ears(), Mouth()
+    voice_history = []
     from primus.integration import cognition
     from primus.camera_state import latest_teacher_frame
     from primus.people import has_pending_introduction
@@ -31,7 +31,11 @@ def _loop():
                 interaction_active=has_pending_introduction(),
             ):
                 print('[heard]', text)
-                mouth.say(think(text))
+                from primus.ui import reference_companion_reply
+
+                voice_history, _ = reference_companion_reply(text, voice_history)
+                if voice_history:
+                    mouth.say(voice_history[-1].get('content', ''))
         except Exception:
             LOGGER.exception('Voice agent iteration failed')
             _stop.wait(2)
