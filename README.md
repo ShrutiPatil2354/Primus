@@ -152,6 +152,24 @@ move, grip, and release actions and records each completed episode with a
 reward in the local database. This creates the state-action-reward data needed
 before introducing an RL or meta-RL training worker.
 
+## Optional cognition research lab
+
+The prototype helpers in `src/cognition/` are isolated from chat, task routing,
+and voice output. They include a separate salience-aware SQLite notebook,
+explicit decay/consolidation/forget operations, and advisory social, spatial,
+affect, metacognition, and behavior helpers. They do not infer validated
+mental states or issue robot actions.
+
+To expose the separate memory notebook tab, set `PRIMUS_COGNITION_UI=1` before
+starting the app. Its database is `data/cognitive_memory.sqlite3`; it does not
+read, migrate, or replace `data/primus_memory.db`. Decay and consolidation are
+manual in the UI. The replay daemon is a separate API and only runs if a caller
+explicitly starts it.
+
+These helpers are early prototypes. MuJoCo G1/MJX training, cloud perception
+and planning services, and ROS 2 integration are tracked separately in
+`IMPLEMENTATION_STATUS.md` and are not part of the current runtime.
+
 ## How PRIMUS differs from a typical chatbot
 
 | Capability | PRIMUS today | Typical pretrained chatbot |

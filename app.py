@@ -1,4 +1,5 @@
 import socket
+import os
 import gradio as gr
 
 from src.ui import theme
@@ -713,6 +714,48 @@ with gr.Blocks(
 
             stats_html = gr.HTML()
             panels_html = gr.HTML()
+
+        # The research surface is opt-in. It is not part of the default chat
+        # flow and has no output wired into the agent, memory gate, or voice.
+        if os.getenv("PRIMUS_COGNITION_UI", "0").strip().lower() in {"1", "true", "yes"}:
+            from src.ui import cognition_handlers
+
+            with gr.Tab("Cognition Lab", id="cognition-lab-tab"):
+                gr.Markdown(
+                    "## Optional cognition memory lab\n"
+                    "These notes use a separate research database and do not affect chat answers."
+                )
+                with gr.Row():
+                    cog_kind = gr.Textbox(label="Memory type", value="note")
+                    cog_salience = gr.Slider(0, 1, value=0.5, step=0.05, label="Salience")
+                cog_payload = gr.Textbox(label="Note or JSON payload", lines=3)
+                with gr.Row():
+                    cog_save = gr.Button("Save note")
+                    cog_maintain = gr.Button("Run decay and consolidation")
+                    cog_refresh = gr.Button("Refresh")
+                cog_status = gr.Markdown()
+                cog_records = gr.HTML(cognition_handlers.list_memories())
+                with gr.Row():
+                    cog_forget_id = gr.Textbox(label="Memory ID to forget")
+                    cog_forget = gr.Button("Forget selected ID", variant="stop")
+                cog_save.click(
+                    cognition_handlers.add_memory,
+                    inputs=[cog_kind, cog_payload, cog_salience],
+                    outputs=[cog_status, cog_records],
+                )
+                cog_maintain.click(
+                    cognition_handlers.maintain_memories,
+                    outputs=[cog_status, cog_records],
+                )
+                cog_refresh.click(
+                    cognition_handlers.list_memories,
+                    outputs=[cog_records],
+                )
+                cog_forget.click(
+                    cognition_handlers.forget_memory,
+                    inputs=[cog_forget_id],
+                    outputs=[cog_status, cog_records],
+                )
 
     # =======================================================================
     # STATE
