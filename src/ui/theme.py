@@ -1815,54 +1815,31 @@ CSS += r"""
     min-height: 0 !important;
 }
 
-/* Minimal Audio Input Button */
-.compact-audio-input {
-    min-width: 46px !important;
-    max-width: 46px !important;
-    height: 46px !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-}
-.compact-audio-input > div, .compact-audio-input .wrap {
-    border: none !important;
-    background: transparent !important;
-    min-height: 46px !important;
-    height: 46px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-.compact-audio-input button {
-    min-width: 46px !important;
-    height: 46px !important;
-    padding: 0 !important;
-    margin: 0 !important;
+/* Composer microphone button and separate recorder row */
+.voice-input-button {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    border: 1px solid #294362 !important;
     border-radius: 50% !important;
-    background: #0f1c30 !important;
-    border: 1px solid #182a46 !important;
-    color: #f1f5f9 !important;
+    background: #10213a !important;
+    color: #e7f2ff !important;
+    font-size: 19px !important;
+    padding: 0 !important;
 }
-#voice-input-control {
-    flex: 0 0 46px !important;
-    position: relative !important;
-    z-index: 2;
-}
-#voice-input-control svg {
-    color: #f1f5f9 !important;
-    stroke: currentColor !important;
-}
-.compact-audio-input button:hover {
-    background: #142540 !important;
+.voice-input-button:hover {
+    background: #173253 !important;
     border-color: #38bdf8 !important;
 }
-.compact-audio-input label > span:first-child,
-.compact-audio-input [data-testid="waveform"],
-.compact-audio-input .clear-button {
-    display: none !important;
+.voice-recorder-panel {
+    margin: 10px 8px 0 !important;
+    padding: 12px !important;
+    border: 1px solid #294362 !important;
+    border-radius: 14px !important;
+    background: #0b1424 !important;
+}
+.voice-recorder-panel button {
+    min-height: 36px !important;
 }
 
 

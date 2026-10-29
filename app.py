@@ -324,16 +324,13 @@ with gr.Blocks(
                             )
 
 
-                            audio_in = gr.Audio(
-                                visible=True,
-                                sources=["microphone"],
-                                type="filepath",
-                                label="Record a voice question",
-                                show_label=False,
-                                elem_id="voice-input-control",
-                                elem_classes=["compact-audio-input", "voice-input-control"],
+                            voice_input_btn = gr.Button(
+                                "🎙",
+                                variant="secondary",
+                                elem_id="voice-input-button",
+                                elem_classes=["voice-input-button"],
                                 scale=0,
-                                min_width=46,
+                                min_width=42,
                             )
                             send_btn = gr.Button(
                                 "\u2191",
@@ -341,6 +338,20 @@ with gr.Blocks(
                                 elem_classes=["chatgpt-send-btn"],
                                 scale=0,
                                 min_width=40,
+                            )
+
+                        with gr.Row(
+                            visible=False,
+                            elem_id="voice-recorder-panel",
+                            elem_classes=["voice-recorder-panel"],
+                        ) as voice_recorder_panel:
+                            audio_in = gr.Audio(
+                                sources=["microphone"],
+                                type="filepath",
+                                label="Record a voice question",
+                                show_label=False,
+                                elem_classes=["voice-recorder"],
+                                scale=1,
                             )
 
                         with gr.Row(elem_classes=["voice-reply-row"]):
@@ -1125,6 +1136,12 @@ with gr.Blocks(
         show_progress="hidden",
     ))
 
+    voice_input_btn.click(
+        lambda: gr.update(visible=True),
+        outputs=[voice_recorder_panel],
+        show_progress="hidden",
+    )
+
 
     doc_upload_box.upload(
         handlers.process_input,
@@ -1143,7 +1160,7 @@ with gr.Blocks(
     )
 
     def _finish_voice_turn(event):
-        return event.then(
+        response_event = event.then(
             handlers.process_input,
             inputs=[
                 pending_chat_text,
@@ -1157,6 +1174,11 @@ with gr.Blocks(
                 use_audio_output,
             ],
             outputs=OUTPUTS,
+        )
+        return response_event.then(
+            lambda: gr.update(visible=False),
+            outputs=[voice_recorder_panel],
+            show_progress="hidden",
         )
 
     _finish_voice_turn(audio_in.stop_recording(
