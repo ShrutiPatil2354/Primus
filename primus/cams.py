@@ -101,8 +101,7 @@ class Cams:
                     self.frames['teacher'] = self.web.get()
                     publish_teacher_frame(self.frames['teacher'])
                     if self._frame_sequence == 0 and self.frames['teacher'] is not None:
-                        from primus.detect import warmup
-                        warmup(self.frames['teacher'])
+                        self._warmup_detection(self.frames['teacher'])
                     if self._using_shm_camera and self._frame_sequence % 30 == 0:
                         _, timestamp_ns, capture_fps = self.web.stats()
                         put(
@@ -133,6 +132,19 @@ class Cams:
                     sim.close()
                 except Exception:
                     LOGGER.exception('Could not close the MuJoCo renderer')
+
+    def _warmup_detection(self, frame):
+        try:
+            from primus.detect import warmup
+
+            warmup(frame)
+        except Exception as error:
+            LOGGER.warning(
+                'Object detector warmup failed; simulation rendering will continue: %s',
+                error,
+            )
+            with self._lock:
+                self.detection_error = str(error)
 
     def close(self):
         self._stop.set()

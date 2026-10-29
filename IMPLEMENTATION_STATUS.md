@@ -43,7 +43,7 @@ Updated 2026-10-29 on `feature/reference-architecture`.
   builder closes its temporary file before MuJoCo loads it.
 - The optional reference voice imports audio dependencies lazily while keeping
   patchable module symbols for its tests.
-- All 80 tests pass. The combined UI exposes both tab surfaces and checks the
+- All 82 tests pass. The combined UI exposes both tab surfaces and checks the
   viewer's lazy start/stop lifecycle and opt-in microphone controls. The
   reference viewer builds under a mocked camera object,
   and the default app builds with the Cognition Lab both disabled and enabled.

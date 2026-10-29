@@ -76,6 +76,26 @@ class TestReferenceScene(unittest.TestCase):
         cams.web = mock.Mock(status="Camera 0 is unavailable")
         self.assertIn("CAMERA UNAVAILABLE", cams.status())
 
+    def test_missing_detection_model_does_not_stop_simulation_rendering(self):
+        from primus.cams import Cams
+
+        cams = object.__new__(Cams)
+        cams._lock = threading.RLock()
+        cams.render_error = None
+        cams.detection_error = None
+        with mock.patch(
+            "primus.detect.warmup",
+            side_effect=RuntimeError("No detection model could be loaded"),
+        ):
+            cams._warmup_detection(object())
+        self.assertIsNone(cams.render_error)
+        self.assertIn("No detection model", cams.detection_error)
+
+    def test_detector_accepts_the_project_yolov8n_fallback_weight(self):
+        from primus.detect import MODEL_FILES
+
+        self.assertIn(("yolov8n.pt", "YOLOv8n PyTorch"), MODEL_FILES)
+
 
 class TestReferenceUIConstruction(unittest.TestCase):
     def test_reference_viewer_builds_without_opening_camera_hardware(self):

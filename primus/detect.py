@@ -21,6 +21,7 @@ MODEL_FILES = (
     ('yolo11x.pt', 'YOLO11x PyTorch'),
     ('yolo11n.engine', 'YOLO11n TensorRT'),
     ('yolo11n.pt', 'YOLO11n PyTorch'),
+    ('yolov8n.pt', 'YOLOv8n PyTorch'),
 )
 
 
