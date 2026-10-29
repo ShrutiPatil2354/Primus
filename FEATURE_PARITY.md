@@ -16,10 +16,12 @@ the companion stack and hardware-adjacent pieces are isolated and opt-in.
 | Rust safety watchdog prototype | `safety_rs/` | Linux `/proc` and `kill` prototype; Rust toolchain is absent here. It is not a physical emergency stop. |
 | Terminal demos, setup and evaluation | `terminal/`, `setup.md`, `scripts/run_human_demo.sh`, `scripts/cloud_bootstrap.sh`, copied reference tests | Shell demos are for Linux. Reference deterministic tests run under the current Windows Python environment. |
 
-The generated `spine_bin` executable and `sim/kitchen_compiled.xml` were not
-copied: they are machine-built artifacts, and the compiled XML contains
-absolute paths from the reference workstation. The C++ sources, portable MJCF
-inputs, licenses, build recipe, and generation helpers are included instead.
+The source-tree audit accounted for every reference file. The reference
+`dump_xml.py` helper is present under its original name. The generated
+`spine_bin` executable and `sim/kitchen_compiled.xml` are build artifacts; the
+compiled XML contains absolute paths from the reference workstation. The C++
+sources, portable MJCF inputs, licenses, build recipe, and generation helper
+are included instead.
 
 ## Verification on this workstation
 
@@ -27,6 +29,9 @@ inputs, licenses, build recipe, and generation helpers are included instead.
 - The default zPrimus app imports with the Cognition Lab disabled and enabled.
 - The reference Gradio viewer builds under a mocked camera object, without
   opening camera hardware.
+- `reference_app.py` launched as a local HTTP service and returned HTTP 200
+  from `http://127.0.0.1:7862/`; camera capture was unavailable on this host,
+  and the UI reported that condition while remaining available.
 - The reference procedural G1 scene loads in MuJoCo on Windows.
 - C++ and Rust native builds, ROS 2 launch, MJX training, and model-backed cloud
   services need their respective external toolchains or assets and were not
