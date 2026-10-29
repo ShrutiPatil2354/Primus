@@ -1,0 +1,4 @@
+# Install only when enabling the optional reference voice loop on this OS.
+# The main requirements.txt already contains the reference UI, MuJoCo,
+# detection, and speech recognition dependencies.
+sounddevice

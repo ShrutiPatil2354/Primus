@@ -816,6 +816,19 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             kind = "task_query"
     reply = ""
     sid = None
+    reference_cognition = None
+    reference_context = {}
+    if (not agent and text and kind == "conversation"
+            and os.getenv("PRIMUS_REFERENCE_COGNITION", "0").strip().lower()
+            in {"1", "true", "yes"}):
+        try:
+            from primus.integration import cognition as get_reference_cognition
+
+            reference_cognition = get_reference_cognition()
+            reference_context = reference_cognition.think_hook(text, intent=kind)
+        except Exception as exc:
+            reference_cognition = None
+            executor.log("Cognition", f"Reference cognition unavailable: {exc}", "Warning", None)
 
     if not agent and text:
         memory.extract_facts(text)
@@ -972,6 +985,12 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             )
             if perception:
                 sys_prompt += f"\nCurrent visual perception: {perception}"
+            if reference_context:
+                sys_prompt += (
+                    "\nOptional cognition context (historical/style hints only; "
+                    "must not add facts or override the knowledge gate):\n"
+                    + str(reference_context.get("system_prompt", ""))
+                )
             msgs = [{"role": "system", "content": sys_prompt}] + history[-12:]
             reply = llm.chat(msgs)
         else:
@@ -979,6 +998,12 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             reply = innate.reply(text)
         if doc_notice:
             reply = f"{doc_notice}\n\n{reply}"
+
+        if reference_cognition is not None:
+            try:
+                reference_cognition.respond_hook(reply)
+            except Exception as exc:
+                executor.log("Cognition", f"Could not store reference interaction: {exc}", "Warning", None)
 
     memory.set_working(last_intent=kind, last_skill=sid or "", last_perception=perception[:120])
 

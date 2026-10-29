@@ -1,67 +1,51 @@
 # Reference feature implementation status
 
-Updated 2026-10-29.
+Updated 2026-10-29 on `feature/reference-architecture`.
 
-## Rollback and compatibility checkpoints
+## Compatibility and rollback
 
-- `6051aa5` is pushed to `origin/feature/build-your-own-agent` and captures the
-  previously untracked plan and utility scripts before implementation.
-- `f5cbdb4` is a local compatibility checkpoint after restoring the tabletop
-  simulator API and fixing two legacy flow issues. It passed the original
-  22-test suite. A push of this follow-up checkpoint was rejected by the
-  approval layer, so the remote rollback point remains `6051aa5`.
-- The cognition feature work is isolated on the current branch and can be
-  reverted independently. No current memory database or model files were
-  migrated or rewritten by this work.
+- `6051aa5` is the original pre-feature checkpoint on the remote base branch.
+- The current reference-architecture branch retains all earlier commits and
+  adds each feature group in separate commits. Changes in this work are being
+  verified before updating the remote branch.
+- Existing local databases and model files were not migrated or rewritten.
+- The original zPrimus chat/UI flow remains the default. Reference cognition
+  enters it only when `PRIMUS_REFERENCE_COGNITION=1`; the reference viewer is a
+  separate `reference_app.py` process on port 7862 by default.
 
-## Implemented in the current working tree
+## Added feature groups
 
-- A small bounded tabletop simulator API under `src/robot_sim/`, with symbolic
-  actions and storage of episodes for offline evaluation. It has no hardware
-  connection.
-- Backward-compatible episodic event recording and Ask Mode upload visibility
-  fixes.
-- An optional cognition package with a separate salience-aware SQLite store,
-  explicit decay/consolidation/forget operations, and a manually started,
-  stoppable replay daemon.
-- Explicit-input advisory helpers for social/acoustic cues, bounded affect,
-  spatial object notes and velocity suggestions, metacognition, proactive
-  prompts, developmental counters, toy physiology, social-bond state,
-  pragmatics, demonstration/play/gesture hints, approximate recall, and
-  optional PyTorch EWC/skill-adapter utilities.
+- Full `primus/` reference package: conversation brain, voice loop, object and
+  people memory, camera/detection, cognition integration, social/affect,
+  spatial/proprioceptive helpers, simulation scene composition, and terminal
+  demos. Includes the reference docs and tests.
+- Optional salience-aware cognition UI/store under `src/cognition/`, with a
+  separate database, manual decay/consolidation/forget controls, and advisory
+  helpers.
+- G1 and kitchen MuJoCo assets, a lazy headless simulator wrapper, and the
+  reference procedural scene builder.
+- Standalone cloud/MJX training and collection workflows, ASTRA, policy export,
+  CEM planning, perception service, and model/serve scripts.
+- Optional ROS 2 bridges adapted to read the zPrimus camera stream.
+- Reference C++ camera/reflex/spine sources with a CMake recipe, and the Rust
+  watchdog prototype with its platform and safety limits documented.
+- A separate reference viewer/voice launcher; voice is opt-in, preventing a
+  second microphone loop from starting with the default app.
 
-The cognition modules are not imported into the default chat pipeline. The
-existing Gradio event contract, intent routing, knowledge gate, and voice path
-remain independent of them.
-- `PRIMUS_COGNITION_UI=1` exposes a separate Cognition Lab tab for research
-  memory. The default is off; enabling it does not alter existing tabs or
-  handlers. Both UI configurations imported successfully.
-- Optional MuJoCo G1 assets and a lazy headless simulation wrapper are under
-  `sim/g1/`, `sim/kitchen_g1.xml`, and `src/simulation/`. The G1 kitchen scene
-  loads and steps in this environment; MJX training remains unavailable until
-  its separate JAX stack is installed.
-- Standalone MJX/PPO collection and training, ASTRA, policy export, CEM planning,
-  and lazy cloud perception service sources are now under `cloud/`. The CEM
-  loader was adapted for the trainer's state-dictionary checkpoint format.
-  These scripts are not called by the UI; MJX cannot run in this environment
-  because JAX is absent, and the cloud service has no models here.
-- An optional ROS 2 topic package is under `primus_ros2/`. Its perception node
-  consumes the zPrimus MJPEG stream; its executor explicitly reports the
-  missing motion backend. ROS 2 is not installed in this environment, so this
-  package was not built or run.
+## Verification and remaining environment requirements
 
-## Remaining feature groups
+- Reference SQLite connections now close deterministically on Windows; the
+  telemetry file lock has a Windows implementation; the procedural MJCF
+  builder closes its temporary file before MuJoCo loads it.
+- The optional reference voice imports audio dependencies lazily while keeping
+  patchable module symbols for its tests.
+- All 76 tests pass. The reference viewer builds under a mocked camera object,
+  and the default app builds with the Cognition Lab both disabled and enabled.
+- MJX training needs JAX. Cloud inference needs model files. ROS 2 needs a ROS
+  environment. The C++ sources need an installed compiler plus MuJoCo/OpenCV
+  development packages. The Rust watchdog needs a Rust toolchain and is Linux
+  specific. These runtime paths cannot be exercised on the current host as
+  configured.
 
-1. Validate MJX/PPO, episode collection, ASTRA, and policy export in an isolated
-   JAX-capable environment; the current host cannot run the MJX jobs.
-2. Run the optional cloud perception/planning services with explicit models
-   and service dependencies, then decide whether to add client adapters.
-3. Build and exercise the ROS 2 package in a ROS 2 environment. Keep physical
-   control separate until a validated motion backend and safety design exist.
-
-## Verification
-
-The full 28-test suite passes, including the isolated cognition, MuJoCo, and
-ASTRA/CEM checkpoint checks. The app imports successfully with the cognition
-tab both disabled and enabled. All new service integrations remain outside
-the default flow.
+No physical motor controller is provided by the reference repository or this
+port. Prototype motor/planning outputs remain advisory or simulation-only.

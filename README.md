@@ -170,6 +170,25 @@ These helpers are early prototypes. MuJoCo G1/MJX training, cloud perception
 and planning services, and ROS 2 integration are tracked separately in
 `IMPLEMENTATION_STATUS.md` and are not part of the current runtime.
 
+## Full reference companion app
+
+The complete reference module package is also available under `primus/` with
+its cognition integration, camera/detection stack, object and people memory,
+voice components, and scene helpers. To launch its separate visual companion
+UI without changing the default zPrimus app, run:
+
+```powershell
+.\.venv\Scripts\python.exe .\reference_app.py
+```
+
+It uses port 7862 by default (`PRIMUS_REFERENCE_PORT` can change it). The
+microphone agent is disabled by default; enable it explicitly with
+`$env:PRIMUS_REFERENCE_VOICE = "1"` before launching. If that voice loop needs
+an audio device package, install `requirements-reference.txt` into the same
+virtual environment. `PRIMUS_REFERENCE_COGNITION=1` optionally adds the
+reference cognition hooks to default-app conversation turns while retaining
+the existing knowledge gate.
+
 ## Optional G1 simulation
 
 The licensed MJCF assets are under `sim/g1/`, with a kitchen scene in
@@ -191,6 +210,13 @@ The separate `primus_ros2/` package relays voice text/status topics and can
 publish the current MJPEG stream as a ROS image topic. Its task executor has no
 motion backend and only reports requests. ROS 2 must be installed separately;
 see `primus_ros2/README.md`. This package is not started by the app.
+
+The reference C++ camera/reflex/spine and Rust watchdog sources are included as
+separate research components under `core_cpp/` and `safety_rs/`. The camera
+publisher is Linux-only; the Rust watchdog uses Linux `/proc` and only stops its
+own Python app process. Neither is a safety-rated hardware controller. See
+[`FEATURE_PARITY.md`](./FEATURE_PARITY.md) for the full feature map and platform
+requirements.
 
 ## How PRIMUS differs from a typical chatbot
 
