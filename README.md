@@ -170,6 +170,14 @@ These helpers are early prototypes. MuJoCo G1/MJX training, cloud perception
 and planning services, and ROS 2 integration are tracked separately in
 `IMPLEMENTATION_STATUS.md` and are not part of the current runtime.
 
+## Optional G1 simulation
+
+The licensed MJCF assets are under `sim/g1/`. A headless wrapper is available
+through `src.simulation.mujoco_g1.G1Simulation`; it loads the model only when
+constructed and steps MuJoCo simulation state without connecting to hardware.
+The MJX training stack is separate and requires JAX, which is not part of the
+default setup. Rendering also requires a working graphics backend.
+
 ## How PRIMUS differs from a typical chatbot
 
 | Capability | PRIMUS today | Typical pretrained chatbot |

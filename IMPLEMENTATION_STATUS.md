@@ -35,16 +35,18 @@ remain independent of them.
 - `PRIMUS_COGNITION_UI=1` exposes a separate Cognition Lab tab for research
   memory. The default is off; enabling it does not alter existing tabs or
   handlers. Both UI configurations imported successfully.
+- Optional MuJoCo G1 assets and a lazy headless simulation wrapper are under
+  `sim/g1/` and `src/simulation/`. The model loads and steps in this environment;
+  MJX training remains unavailable until its separate JAX stack is installed.
 
 ## Remaining feature groups
 
-1. Add optional MuJoCo G1 simulation while retaining the tabletop sandbox.
-2. Port standalone MJX/PPO, ASTRA, episode collection, and policy export only
+1. Port standalone MJX/PPO, ASTRA, episode collection, and policy export only
    after dependency and checkpoint compatibility is established.
-3. Evaluate optional cloud perception/planning services individually. The
+2. Evaluate optional cloud perception/planning services individually. The
    reference world-model planner and trainer checkpoint format need an adapter
    before joint use.
-4. Keep ROS 2 and hardware-facing control separate until a validated motion
+3. Keep ROS 2 and hardware-facing control separate until a validated motion
    backend and safety design exist.
 
 ## Verification
