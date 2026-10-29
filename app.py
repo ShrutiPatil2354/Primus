@@ -445,11 +445,13 @@ with gr.Blocks(
                             )
 
                         agent_instructions = gr.Textbox(
-                            label="Response rules",
-                            lines=4,
+                            label="Custom system prompt / response rules",
+                            lines=6,
                             placeholder=(
-                                "Answer only from what I teach you or upload. "
-                                "If unknown, say so."
+                                "Define the assistant's role, scope, tone, and refusal behavior. "
+                                "Example: You are a medical reference assistant. Answer only "
+                                "from the knowledge I teach or upload; if missing or outside "
+                                "scope, say you do not know."
                             ),
                         )
 

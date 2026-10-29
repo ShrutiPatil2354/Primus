@@ -313,8 +313,6 @@ class PostgresMemoryStore:
             f"[AGENT] {agent['name']}",
             f"[DOMAIN] {agent['domain']}",
         ]
-        if agent.get("instructions"):
-            lines.append(f"[RULES] {agent['instructions']}")
         skills = self.list_agent_skills(agent_id)
         if skills:
             for skill in skills:

@@ -975,22 +975,20 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
         memory.add_episode("conversation", text[:80])
         if llm.online():
             taught_summary = STORE.agent_summary(agent_id) if agent else memory.summary()
-            sys_prompt = (
-                f"You are PRIMUS active agent '{agent_name}', a strict zero-prior-knowledge (tabula rasa) cognitive agent.\n"
-                "STRICT RULES:\n"
-                "1. NEVER answer medical questions, disease causes, tasks, facts, or how-to questions from pretrained knowledge.\n"
-                f"2. If the user asks ANY factual or medical question that is not explicitly in your taught knowledge below, you MUST reply: '{chosen_fallback}' Do NOT guess or provide outside information.\n"
-                "3. You may freely converse about yourself, your memory, your perceptions, and your state.\n"
-                "The ONLY knowledge you possess (acquired from your teacher for this agent):\n" + taught_summary
+            from src.core.agent_prompts import build_system_prompt
+
+            sys_prompt = build_system_prompt(
+                agent_name,
+                taught_summary,
+                chosen_fallback,
+                domain=agent.get("domain", "") if agent else "",
+                custom_prompt=agent.get("instructions", "") if agent else "",
+                perception=perception,
+                cognition_hints=(
+                    str(reference_context.get("system_prompt", ""))
+                    if reference_context else ""
+                ),
             )
-            if perception:
-                sys_prompt += f"\nCurrent visual perception: {perception}"
-            if reference_context:
-                sys_prompt += (
-                    "\nOptional cognition context (historical/style hints only; "
-                    "must not add facts or override the knowledge gate):\n"
-                    + str(reference_context.get("system_prompt", ""))
-                )
             msgs = [{"role": "system", "content": sys_prompt}] + history[-12:]
             reply = llm.chat(msgs)
         else:
