@@ -781,10 +781,12 @@ with gr.Blocks(
 
         with gr.Tab("Reference Simulator", id="reference-simulator-tab") as reference_tab:
             gr.Markdown(
-                "## Reference architecture\n"
-                "Camera views, the G1 kitchen simulation, and reference telemetry "
-                "run here under the same Primus URL. The viewer starts when this "
-                "tab is selected and stops when you leave it."
+                "## Reference Simulator\n"
+                "Choose KITCHEN, ROOM, G1 EYE, or G1 BODY to switch the simulation "
+                "view; the orbit sliders move the kitchen camera. TEACHER needs a "
+                "connected webcam. DETECT needs the webcam and a supported YOLO "
+                "model. Scroll below the viewer for the optional voice controls. "
+                "The simulator starts on this tab and stops when you leave it."
             )
             if reference_ui is not None:
                 reference_timer, reference_viewport, reference_telemetry = reference_ui.render()

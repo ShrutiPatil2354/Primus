@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -59,6 +60,21 @@ class TestReferenceScene(unittest.TestCase):
         model = load_model()
         self.assertEqual(model.nu, 29)
         self.assertGreater(model.nbody, 31)
+
+    def test_detect_feed_reports_missing_camera_instead_of_loading_forever(self):
+        from primus.cams import Cams
+
+        cams = object.__new__(Cams)
+        cams._lock = threading.RLock()
+        cams._focus = "detect"
+        cams.fps = 0.0
+        cams.render_error = None
+        cams.detection_error = None
+        cams.detection_ready = False
+        cams.detection_fps = 0.0
+        cams.frames = {"teacher": None}
+        cams.web = mock.Mock(status="Camera 0 is unavailable")
+        self.assertIn("CAMERA UNAVAILABLE", cams.status())
 
 
 class TestReferenceUIConstruction(unittest.TestCase):
@@ -128,6 +144,10 @@ class TestReferenceUIConstruction(unittest.TestCase):
                     self.assertEqual(status, "fake viewer")
                     self.assertTrue(timer.active)
                     current = ui._C
+                    ui.focus("g1_eye")
+                    self.assertEqual(current.focus, "g1_eye")
+                    ui.set_orbit(90, -10, 2.5)
+                    self.assertEqual(current.orbit, (90, -10, 2.5))
                     stopped_timer = ui.stop_viewer()
                     self.assertTrue(current.closed)
                     self.assertFalse(stopped_timer.active)
@@ -159,9 +179,19 @@ class TestCombinedPrimusUI(unittest.TestCase):
             event for event in dependencies
             if (event.get("api_name") or "").startswith("stop_viewer")
         ]
+        feed_events = [
+            event for event in dependencies
+            if (event.get("api_name") or "").startswith("focus")
+        ]
+        orbit_events = [
+            event for event in dependencies
+            if (event.get("api_name") or "").startswith("set_orbit")
+        ]
         self.assertEqual(start_event["targets"][0][1], "select")
         self.assertGreaterEqual(len(stop_events), 5)
         self.assertTrue(all(event["targets"][0][1] == "select" for event in stop_events))
+        self.assertEqual(len(feed_events), 6)
+        self.assertEqual(len(orbit_events), 3)
 
     def test_microphone_loop_is_explicit_and_reports_missing_device(self):
         import primus.ears as ears

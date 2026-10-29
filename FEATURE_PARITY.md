@@ -25,7 +25,7 @@ are included instead.
 
 ## Verification on this workstation
 
-- `python -m unittest discover -s tests`: 79 tests pass.
+- `python -m unittest discover -s tests`: 80 tests pass.
 - The default zPrimus app imports with the Cognition Lab disabled and enabled.
 - The combined dashboard serves the existing Workspace and Reference Simulator
   tabs together at one URL. The reference camera remains idle until its tab is
@@ -36,6 +36,9 @@ are included instead.
   labels in its page. The standalone `reference_app.py` also returned HTTP 200
   on port 7862. Camera capture was unavailable on this host, and the viewer
   reported that condition while remaining available.
+- Scene feed buttons and orbit sliders appear above the rendered image.
+- The Detect feed reports a missing camera explicitly instead of showing an
+  indefinite loading status.
 - The reference procedural G1 scene loads in MuJoCo on Windows.
 - C++ and Rust native builds, ROS 2 launch, MJX training, and model-backed cloud
   services need their respective external toolchains or assets and were not

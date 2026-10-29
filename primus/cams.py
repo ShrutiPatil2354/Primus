@@ -206,6 +206,13 @@ class Cams:
         if is_detection_view:
             if detection_error:
                 return f'DETECTION ERROR · {detection_error}'
+            if self.frames.get('teacher') is None:
+                source_status = str(
+                    getattr(self.web, 'status', 'Camera frame unavailable')
+                )
+                if 'unavailable' in source_status.lower():
+                    return f'CAMERA UNAVAILABLE: {source_status}'
+                return f'WAITING FOR CAMERA: {source_status}'
             kind = model_kind() or 'detection'
             state = f'{kind.upper()} LIVE' if detection_ready else f'LOADING {kind.upper()}'
             return (

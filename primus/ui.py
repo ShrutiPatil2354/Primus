@@ -151,7 +151,7 @@ EMBEDDED_CSS = """
 #reference-viewer #viewport {
     background: #000 !important;
     border: 0 !important;
-    height: min(62vh, 720px) !important;
+    height: min(52vh, 600px) !important;
     inset: auto !important;
     margin: 0 !important;
     max-height: none !important;
@@ -323,37 +323,13 @@ def stop_voice():
 
 def render():
     with gr.Column(elem_id='reference-viewer'):
-        gr.Markdown('### Voice companion (microphone is opt-in)')
-        with gr.Row():
-            voice_start = gr.Button('Start voice companion', variant='primary')
-            voice_stop = gr.Button('Stop voice companion', variant='secondary')
-        voice_status = gr.Markdown(
-            'Voice companion is running.' if _VOICE_RUNNING else
-            'Voice companion is stopped. Start it only when you are ready to use the microphone.'
-        )
-        voice_start.click(start_voice, outputs=[voice_status], show_progress='hidden')
-        voice_stop.click(stop_voice, outputs=[voice_status], show_progress='hidden')
-
-        viewport = gr.Image(
-            elem_id='viewport',
-            interactive=False,
-            show_label=False,
-        )
-        telemetry = gr.Textbox(
-            elem_id='telemetry',
-            interactive=False,
-            lines=1,
-            show_label=False,
-        )
+        gr.Markdown('### Scene views and camera controls')
+        feed_buttons = []
         with gr.Column(elem_id='controls'):
             with gr.Row(elem_id='swap-row'):
                 for name in FEEDS:
                     label = name.replace('_', ' ').upper()
-                    gr.Button(label, size='sm').click(
-                        focus,
-                        inputs=gr.State(name),
-                        outputs=[viewport, telemetry],
-                    )
+                    feed_buttons.append((gr.Button(label, size='sm'), name))
             with gr.Row(elem_id='orbit-row'):
                 azimuth = gr.Slider(
                     0, 360, value=200, label='azimuth', step=1
@@ -370,6 +346,36 @@ def render():
                         inputs=[azimuth, elevation, distance],
                         outputs=None,
                     )
+
+        viewport = gr.Image(
+            elem_id='viewport',
+            interactive=False,
+            show_label=False,
+        )
+        telemetry = gr.Textbox(
+            elem_id='telemetry',
+            interactive=False,
+            lines=1,
+            show_label=False,
+        )
+        for button, name in feed_buttons:
+            button.click(
+                focus,
+                inputs=gr.State(name),
+                outputs=[viewport, telemetry],
+            )
+
+        gr.Markdown('### Voice companion (microphone is opt-in)')
+        with gr.Row():
+            voice_start = gr.Button('Start voice companion', variant='primary')
+            voice_stop = gr.Button('Stop voice companion', variant='secondary')
+        voice_status = gr.Markdown(
+            'Voice companion is running.' if _VOICE_RUNNING else
+            'Voice companion is stopped. Start it only when you are ready to use the microphone.'
+        )
+        voice_start.click(start_voice, outputs=[voice_status], show_progress='hidden')
+        voice_stop.click(stop_voice, outputs=[voice_status], show_progress='hidden')
+
         timer = gr.Timer(0.05, active=False)
         timer.tick(tick, inputs=None, outputs=[viewport, telemetry])
     return timer, viewport, telemetry
