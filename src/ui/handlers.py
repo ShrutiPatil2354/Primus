@@ -733,7 +733,7 @@ def toggle_chat_mode(mode):
         )
     else:
         return (
-            gr.update(visible=True, value=None),
+            gr.update(visible=False, value=None),
             gr.update(placeholder="Ask anything..."),
         )
 

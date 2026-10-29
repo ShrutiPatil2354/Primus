@@ -116,11 +116,14 @@ def bump_confidence(sid, reward=1.0):
 # ================= EPISODIC (events) =================
 
 def add_episode(kind, detail):
-    with _lock:
-        b = load()
-        b["episodic"].insert(0, {"t": _now(), "kind": kind, "detail": detail})
-        b["episodic"] = b["episodic"][:200]
-        _save(b)
+    # Use the repository's append operation. Replacing the full snapshot here
+    # can discard newer rows when another storage backend is active.
+    STORE.add_episode(kind, detail)
+
+
+def bump_episode(kind, detail):
+    """Backward-compatible name for recording an episodic event."""
+    return add_episode(kind, detail)
 
 
 # ================= SENSORY (last seen/heard) =================
