@@ -152,7 +152,7 @@ def transcribe_voice_capture(encoded_audio, display_history):
 
 
 VOICE_CAPTURE_JS = r"""
-async (unused_payload, history) => {
+async () => {
   const button = document.querySelector("#voice-input-button button");
   const buttonRoot = document.querySelector("#voice-input-button");
   const originalLabel = button ? button.textContent : "🎙";
@@ -223,9 +223,9 @@ async (unused_payload, history) => {
     for (let offset = 0; offset < bytes.length; offset += 0x8000) {
       binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
     }
-    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`, history];
+    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`];
   } catch (error) {
-    return [`PRIMUS_VOICE_ERROR:${error.message || error}`, history];
+    return [`PRIMUS_VOICE_ERROR:${error.message || error}`];
   } finally {
     if (stopTimer) clearInterval(stopTimer);
     if (recorder && recorder.state !== "inactive") {
@@ -1266,14 +1266,19 @@ with gr.Blocks(
         outputs=OUTPUTS,
     )
 
-    voice_capture = voice_input_btn.click(
-        transcribe_voice_capture,
-        inputs=[voice_payload_state, chatbot],
-        outputs=[chatbot, pending_chat_text],
+    voice_input_btn.click(
+        None,
+        inputs=[],
+        outputs=[voice_payload_state],
         js=VOICE_CAPTURE_JS,
         show_progress="hidden",
     )
-    voice_capture.then(
+    voice_payload_state.change(
+        transcribe_voice_capture,
+        inputs=[voice_payload_state, chatbot],
+        outputs=[chatbot, pending_chat_text],
+        show_progress="hidden",
+    ).then(
         handlers.process_input,
         inputs=[
             pending_chat_text,
