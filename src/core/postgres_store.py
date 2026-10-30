@@ -248,6 +248,19 @@ class PostgresMemoryStore:
             """), {"id": agent_id, "name": name.strip(), "domain": domain.strip(), "instructions": instructions.strip(), "created": now, "updated": now})
         return self.get_agent(agent_id)
 
+    def update_agent(self, agent_id, name, domain, instructions=""):
+        now = datetime.now().isoformat()
+        with self.lock, self._connect() as db:
+            db.execute(
+                """UPDATE agents
+                   SET name = :name, domain = :domain,
+                       instructions = :instructions, updated = :updated
+                   WHERE id = :id""",
+                {"id": agent_id, "name": name.strip(), "domain": domain.strip(),
+                 "instructions": instructions.strip(), "updated": now},
+            )
+        return self.get_agent(agent_id)
+
     def list_agents(self):
         with self.engine.connect() as db:
             return [dict(row) for row in db.execute(text("SELECT * FROM agents ORDER BY updated DESC")).mappings()]

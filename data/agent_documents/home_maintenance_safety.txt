@@ -1,0 +1,38 @@
+Home Maintenance Safety - Sample Knowledge
+===========================================
+
+This fictional checklist provides basic home maintenance guidance. It does
+not replace a licensed tradesperson or an inspection.
+
+Before starting
+----------------
+1. Identify the system and read the equipment manufacturer's instructions.
+2. Tell other occupants what work is being done and keep children and pets
+   away from the work area.
+3. Shut off power, gas, or water when the task requires it, and verify that
+   the system is isolated before touching it.
+4. Wear task-appropriate eye, hand, and breathing protection.
+5. Keep a flashlight, phone, first-aid kit, and fire extinguisher accessible.
+
+Routine schedule
+----------------
+- Test smoke and carbon-monoxide alarms monthly using the test button.
+- Replace alarm batteries according to the manufacturer's instructions and
+  replace the alarm when its stated service life ends.
+- Inspect HVAC filters monthly and replace them on the equipment schedule or
+  sooner when visibly blocked.
+- Check under-sink pipes, appliance hoses, and the water-heater area monthly
+  for leaks or corrosion.
+- Clean dryer lint screens after every load and inspect the vent periodically.
+
+Stop-work conditions
+--------------------
+Leave the area and call a qualified professional for exposed wiring, a gas
+smell or suspected gas leak, structural movement, asbestos, major water
+damage, fire damage, or any task requiring a permit that the worker does not
+hold.
+
+Boundary
+--------
+This document contains no model-specific repair instructions, wiring diagrams,
+part numbers, building-code requirements, or contractor recommendations.

@@ -1,0 +1,44 @@
+Legal Contract Review Policy - Sample Knowledge
+================================================
+
+This policy is a fictional internal review standard for Northstar Works. It
+helps a reviewer identify issues; it is not legal advice and does not state
+which laws apply.
+
+Required contract summary
+-------------------------
+Record the contract title, business owner, supplier or customer, purpose,
+effective date, expiry date, renewal mechanism, governing law, and signature
+status. A contract is not treated as approved merely because it was uploaded.
+
+Review checklist
+----------------
+1. Confirm the legal names of all parties and their authority to sign.
+2. Compare the stated business purpose with the services and deliverables.
+3. Check term, auto-renewal, termination rights, notice method, and exit
+   assistance.
+4. Check payment currency, invoice timing, payment period, taxes, late fees,
+   expenses, and price-change rights.
+5. Check service levels, acceptance criteria, warranties, support, and
+   remedies for missed deliverables.
+6. Check confidentiality, personal-data handling, security duties, breach
+   notice, data return, and deletion.
+7. Check ownership and licensing of pre-existing materials, new work product,
+   trademarks, and open-source components.
+8. Check indemnities, limitation of liability, insurance, force majeure,
+   assignment, subcontracting, dispute resolution, and audit rights.
+9. Record each issue with clause reference, risk, proposed question, owner,
+   and due date.
+
+Approval workflow
+-----------------
+The business owner supplies context, Legal reviews material issues, Security
+reviews data and security clauses when applicable, Finance reviews commercial
+terms, and an authorised signatory approves execution. Keep the final signed
+copy and review notes together.
+
+Boundary
+--------
+This policy contains no jurisdiction-specific law, enforceability opinion,
+approved clause wording, or mandatory deadline. For those questions, say that
+human legal review is required.

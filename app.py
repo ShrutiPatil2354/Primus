@@ -8,15 +8,6 @@ from src.ui import theme
 from src.ui import handlers
 from src.config import SERVER_PORT
 
-try:
-    from primus import ui as reference_ui
-except ImportError as exc:
-    reference_ui = None
-    reference_ui_import_error = str(exc)
-else:
-    reference_ui_import_error = None
-
-
 # ---------------------------------------------------------------------------
 # Small UI helpers
 # ---------------------------------------------------------------------------
@@ -117,6 +108,16 @@ def transcribe_voice_capture(encoded_audio, display_history):
         return list(display_history or []), ""
     if encoded_audio.startswith("PRIMUS_VOICE_ERROR:"):
         raise gr.Error(encoded_audio.partition(":")[2])
+    if encoded_audio.startswith("PRIMUS_TRANSCRIPT:"):
+        transcript = encoded_audio.partition(":")[2].strip()
+        if not transcript:
+            raise gr.Error("No speech detected. Click Start listening and try again.")
+        history = list(display_history or [])
+        history.extend([
+            {"role": "user", "content": transcript},
+            {"role": "assistant", "content": "Thinking…"},
+        ])
+        return history, transcript
 
     mime_type, separator, audio_payload = encoded_audio.partition("::")
     if not separator:
@@ -154,108 +155,195 @@ def transcribe_voice_capture(encoded_audio, display_history):
             os.unlink(audio_path)
 
 
+def process_voice_turn(
+    encoded_audio,
+    history,
+    messages,
+    agent_id,
+    use_camera_context,
+    chat_mode,
+    doc_file,
+    use_audio_output,
+):
+    """Submit a browser transcript directly through the normal chat pipeline."""
+    if encoded_audio == "PRIMUS_VOICE_IDLE":
+        return tuple(gr.skip() for _ in range(17))
+    if not encoded_audio:
+        return tuple(gr.skip() for _ in range(17))
+    if encoded_audio.startswith("PRIMUS_VOICE_ERROR:"):
+        raise gr.Error(encoded_audio.partition(":")[2])
+    if not encoded_audio.startswith("PRIMUS_TRANSCRIPT:"):
+        raise gr.Error("The live voice transcript was not received. Please try again.")
+
+    transcript = encoded_audio.partition(":")[2].strip()
+    if not transcript:
+        raise gr.Error("No speech detected. Click Start listening and try again.")
+    handlers.executor.log("Speech", f"Live transcript received: {transcript[:120]}", "Success", 0.9)
+    return handlers.process_input(
+        transcript, None, history, messages, agent_id, use_camera_context,
+        chat_mode, doc_file, use_audio_output
+    )
+
+
+def keep_voice_input_state(*_values):
+    """Keep chat state untouched while the browser voice control is toggled."""
+    return tuple(gr.skip() for _ in range(17))
+
+
 VOICE_CAPTURE_JS = r"""
-async (_voicePayload, displayHistory) => {
-  const button = document.querySelector("#voice-input-button button");
+async (...inputValues) => {
+  const returnPayload = (payload) => [payload, ...inputValues.slice(1)];
   const buttonRoot = document.querySelector("#voice-input-button");
-  const originalLabel = button ? button.textContent : "🎙";
-  const setLabel = (value) => { if (button) button.textContent = value; };
-  let stream;
-  let context;
-  let recorder;
-  let stopTimer;
-  try {
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      throw new Error("This browser does not support microphone recording.");
+  const button = buttonRoot?.querySelector("button") || buttonRoot;
+  const setLabel = (value) => {
+    const activeButton = document.querySelector("#voice-input-button button") ||
+      document.querySelector("#voice-input-button");
+    if (activeButton) {
+      activeButton.textContent = value;
+      activeButton.setAttribute("aria-label", value);
     }
-    setLabel("●");
-    buttonRoot?.classList.add("recording");
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-    });
-    const supported = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
-    const mimeType = supported.find((type) => MediaRecorder.isTypeSupported(type));
-    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    context = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = context.createAnalyser();
-    analyser.fftSize = 2048;
-    context.createMediaStreamSource(stream).connect(analyser);
-    const samples = new Uint8Array(analyser.fftSize);
-    const chunks = [];
-    const startedAt = Date.now();
-    let lastVoiceAt = startedAt;
-    let heardVoice = false;
-    let noSpeech = false;
-    const stopped = new Promise((resolve, reject) => {
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size) chunks.push(event.data);
-      };
-      recorder.onerror = () => reject(new Error("The microphone recording failed."));
-      recorder.onstop = resolve;
-      recorder.start(250);
-      stopTimer = setInterval(() => {
-        analyser.getByteTimeDomainData(samples);
-        let total = 0;
-        for (const sample of samples) {
-          const value = (sample - 128) / 128;
-          total += value * value;
-        }
-        const rms = Math.sqrt(total / samples.length);
-        const now = Date.now();
-        if (rms > 0.02) {
-          heardVoice = true;
-          lastVoiceAt = now;
-        }
-        if ((heardVoice && now - lastVoiceAt > 1500) ||
-            (!heardVoice && now - startedAt > 8000) ||
-            now - startedAt > 30000) {
-          noSpeech = !heardVoice;
-          clearInterval(stopTimer);
-          recorder.stop();
-        }
-      }, 100);
-    });
-    await stopped;
-    clearInterval(stopTimer);
-    if (noSpeech || !chunks.length) {
-      throw new Error("No speech detected. Click the microphone and try again.");
+  };
+  const setMessageInput = (value) => {
+    const input = document.querySelector(
+      "#chat-message-input textarea, #chat-message-input input"
+    );
+    if (!input) return;
+    const prototype = input instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    if (setter) setter.call(input, value);
+    else input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const keepRecordingLabel = () => {
+    setLabel("⏹ Stop listening");
+    if (window.__primusVoiceCapture && !window.__primusVoiceCapture.stopping) {
+      window.setTimeout(keepRecordingLabel, 100);
     }
-    const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = "";
-    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  };
+
+  const cleanup = (voiceState) => {
+    if (voiceState.recognition) {
+      try { voiceState.recognition.stop(); } catch (_) {}
     }
-    return [`${recorder.mimeType || blob.type}::${btoa(binary)}`, displayHistory];
-  } catch (error) {
-    return [`PRIMUS_VOICE_ERROR:${error.message || error}`, displayHistory];
-  } finally {
-    if (stopTimer) clearInterval(stopTimer);
-    if (recorder && recorder.state !== "inactive") {
-      try { recorder.stop(); } catch (_) {}
+    if (voiceState.stream) {
+      voiceState.stream.getTracks().forEach((track) => track.stop());
     }
-    if (stream) stream.getTracks().forEach((track) => track.stop());
-    if (context && context.state !== "closed") {
-      try { await context.close(); } catch (_) {}
+    if (voiceState.context && voiceState.context.state !== "closed") {
+      voiceState.context.close().catch(() => {});
     }
+    window.__primusVoiceCapture = null;
     buttonRoot?.classList.remove("recording");
-    setLabel(originalLabel);
+    setLabel("🎙 Start listening");
+  };
+
+  const voiceState = window.__primusVoiceCapture;
+  if (voiceState) {
+    voiceState.stopping = true;
+    setLabel("🎙 Start listening");
+    buttonRoot?.classList.remove("recording");
+    if (voiceState.recognition) {
+      try { voiceState.recognition.stop(); } catch (_) {}
+    }
+    try {
+      const transcript = await Promise.race([
+        voiceState.finished,
+        new Promise((resolve) => window.setTimeout(
+          () => resolve((voiceState.finalTranscript || "").trim()), 1200
+        )),
+      ]);
+      if (!transcript) {
+        throw new Error("No speech detected. Click Start listening and try again.");
+      }
+      setMessageInput(transcript);
+      return returnPayload("PRIMUS_VOICE_IDLE");
+    } catch (error) {
+      return returnPayload(`PRIMUS_VOICE_ERROR:${error.message || error}`);
+    } finally {
+      cleanup(voiceState);
+    }
   }
+
+  // Update the control before requesting permission so the user gets
+  // immediate feedback even while the browser permission dialog is open.
+  const startingState = { status: "starting", stopRequested: false };
+  window.__primusVoiceCapture = startingState;
+  buttonRoot?.classList.add("recording");
+  setLabel("⏹ Stop listening");
+  keepRecordingLabel();
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      window.__primusVoiceCapture = null;
+      buttonRoot?.classList.remove("recording");
+      setLabel("🎙 Start listening");
+      return returnPayload("PRIMUS_VOICE_ERROR:Live speech recognition is not supported in this browser.");
+    }
+    const recognition = new SpeechRecognition();
+    startingState.recognition = recognition;
+    startingState.finished = new Promise((resolve) => {
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+      recognition.onresult = (event) => {
+        let interim = "";
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          const result = event.results[index];
+          if (result.isFinal) {
+            startingState.finalTranscript =
+              `${startingState.finalTranscript || ""} ${result[0].transcript}`.trim();
+          } else {
+            interim += result[0].transcript;
+          }
+        }
+        startingState.latestTranscript =
+          `${startingState.finalTranscript || ""} ${interim}`.trim();
+        setMessageInput(startingState.latestTranscript);
+        const preview = startingState.latestTranscript;
+        if (button) {
+          button.title = preview ? `Listening: ${preview}` : "Listening";
+          button.setAttribute("aria-label", preview ? `Listening: ${preview}` : "Listening");
+        }
+      };
+      recognition.onerror = () => {
+        if (startingState.stopping) {
+          resolve((startingState.latestTranscript || startingState.finalTranscript || "").trim());
+        }
+      };
+      recognition.onend = () => {
+        if (startingState.stopping) {
+          resolve((startingState.latestTranscript || startingState.finalTranscript || "").trim());
+        }
+      };
+      try {
+        recognition.start();
+      } catch (error) {
+        resolve("");
+      }
+    });
+  return returnPayload("PRIMUS_VOICE_IDLE");
 }
 """
 
 
-def create_agent_and_refresh(name, domain, instructions):
-    result = handlers.create_agent(name, domain, instructions)
+def create_agent_and_refresh(name, domain, instructions, edit_agent_id):
+    result = handlers.create_agent(name, domain, instructions, edit_agent_id)
     # Existing handler returns:
     # notice, agent_select, existing_select, overview, knowledge,
     # task_library, task_select, manager, doc_select, sidebar
-    return result
+    # Clear the creation form only after the handler reports a successful
+    # creation; validation failures keep the user's entries visible.
+    notice = str(result[0]) if result else ""
+    if "reset-notice success" in notice:
+        return result + ("", "", "", "")
+    return result + (gr.skip(), gr.skip(), gr.skip(), gr.skip())
 
 
 def activate_agent(agent_id):
     """Activate the selected custom agent in Workspace."""
-    return handlers.choose_existing_agent(agent_id)
+    return handlers.choose_existing_agent(agent_id)[:8]
 
 
 def _switch_mode_with_hint(mode):
@@ -283,7 +371,7 @@ def _switch_mode_with_hint(mode):
 with gr.Blocks(
     title="PRIMUS AI Studio",
     theme=gr.themes.Base(),
-    css=theme.CSS + (reference_ui.EMBEDDED_CSS if reference_ui else ""),
+    css=theme.CSS,
     fill_width=True,
 ) as demo:
 
@@ -312,7 +400,6 @@ with gr.Blocks(
     # PAGES
     # =======================================================================
 
-    reference_cleanup_tabs = []
     with gr.Tabs(elem_classes=["app-tabs"]) as main_tabs:
 
         # -------------------------------------------------------------------
@@ -354,15 +441,19 @@ with gr.Blocks(
                         elem_classes=["sidebar-search-box"],
                     )
 
-                    sidebar_view = gr.Radio(
-                        choices=handlers.agent_choices(),
-                        value="",
-                        label="",
-                        show_label=False,
-                        interactive=True,
-                        elem_id="sidebar-agent-picker",
-                        elem_classes=["sidebar-agent-picker"],
-                    )
+                    with gr.Column(
+                        elem_id="agent-picker-scroll",
+                        elem_classes=["agent-picker-scroll"],
+                    ):
+                        sidebar_view = gr.Radio(
+                            choices=handlers.agent_choices(),
+                            value="",
+                            label="",
+                            show_label=False,
+                            interactive=True,
+                            elem_id="sidebar-agent-picker",
+                            elem_classes=["sidebar-agent-picker"],
+                        )
 
                     gr.HTML("""
                     <div class="sidebar-tip">
@@ -413,7 +504,6 @@ with gr.Blocks(
                                 value=False,
                                 interactive=True,
                             )
-
                             use_audio_output = gr.Checkbox(
                                 label="Enable Voice Reply",
                                 value=True,
@@ -442,6 +532,7 @@ with gr.Blocks(
 
                             msg = gr.Textbox(
                                 show_label=False,
+                                elem_id="chat-message-input",
                                 scale=6,
                                 placeholder=(
                                     "Ask anything based on what you have taught "
@@ -454,16 +545,17 @@ with gr.Blocks(
 
 
                             voice_input_btn = gr.Button(
-                                "🎙",
+                                "🎙 Start listening",
                                 variant="secondary",
                                 elem_id="voice-input-button",
                                 elem_classes=["voice-input-button"],
                                 scale=0,
-                                min_width=42,
+                                min_width=132,
                             )
                             send_btn = gr.Button(
                                 "\u2191",
                                 variant="primary",
+                                elem_id="chat-send-button",
                                 elem_classes=["chatgpt-send-btn"],
                                 scale=0,
                                 min_width=40,
@@ -551,8 +643,6 @@ with gr.Blocks(
 
             status_bar = gr.HTML(status_bar_html())
 
-        reference_cleanup_tabs.append(workspace_tab)
-
         # -------------------------------------------------------------------
         # BUILD AGENT
         # -------------------------------------------------------------------
@@ -611,7 +701,7 @@ with gr.Blocks(
                         )
 
                         create_agent_btn = gr.Button(
-                            "➕ Create New Agent",
+                            "➕ Create / Update Agent",
                             variant="primary",
                         )
                         agent_notice = gr.HTML()
@@ -632,6 +722,7 @@ with gr.Blocks(
                             choices=handlers.custom_agent_choices(),
                             interactive=True,
                         )
+                        edit_agent_id = gr.State("")
 
                         activate_workspace_btn = gr.Button(
                             "🚀 Set as Active Workspace Agent",
@@ -710,8 +801,6 @@ with gr.Blocks(
                             "Delete Entire Custom Agent",
                             variant="stop",
                         )
-
-        reference_cleanup_tabs.append(build_agent_tab)
 
         # -------------------------------------------------------------------
         # LEARNING / MEMORY
@@ -833,8 +922,6 @@ with gr.Blocks(
                     )
                     task_notice = gr.HTML()
 
-        reference_cleanup_tabs.append(learning_tab)
-
         # -------------------------------------------------------------------
         # PERCEPTION
         # -------------------------------------------------------------------
@@ -870,8 +957,6 @@ with gr.Blocks(
                         autoplay=True,
                     )
 
-        reference_cleanup_tabs.append(perception_tab)
-
         # -------------------------------------------------------------------
         # SYSTEM
         # -------------------------------------------------------------------
@@ -889,8 +974,6 @@ with gr.Blocks(
 
             stats_html = gr.HTML()
             panels_html = gr.HTML()
-
-        reference_cleanup_tabs.append(system_tab)
 
         # The research surface is opt-in. It is not part of the default chat
         # flow and has no output wired into the agent, memory gate, or voice.
@@ -934,84 +1017,9 @@ with gr.Blocks(
                     outputs=[cog_status, cog_records],
                 )
 
-            reference_cleanup_tabs.append(cognition_tab)
-
-        with gr.Tab("Reference Simulator", id="reference-simulator-tab") as reference_tab:
-            gr.Markdown(
-                "## Reference Simulator\n"
-                "Choose KITCHEN, ROOM, G1 EYE, or G1 BODY to switch the simulation "
-                "view; the orbit sliders move the kitchen camera. TEACHER needs a "
-                "connected webcam. DETECT needs the webcam and a supported YOLO "
-                "model. Scroll below the viewer for the optional voice controls. "
-                "The camera stays active while you use Reference Companion and "
-                "stops when you return to a non-reference tab."
-            )
-            if reference_ui is not None:
-                reference_timer, reference_viewport, reference_telemetry = reference_ui.render()
-            else:
-                gr.Markdown(
-                    "The reference viewer dependencies are unavailable in this "
-                    "Python environment: "
-                    f"`{reference_ui_import_error}`. Install the project requirements "
-                    "to enable this tab."
-                )
-
-        with gr.Tab("Reference Companion", id="reference-companion-tab") as companion_tab:
-            gr.Markdown(
-                "## Reference Companion Brain\n"
-                "Try `who are you?`, `learn tea: boil water; steep tea`, then "
-                "`how do I make tea?`. Introductions and object naming use the "
-                "camera when it is running; open Reference Simulator first to "
-                "start the camera. To move G1 in MuJoCo, teach a supported demo "
-                "such as `Learn wave: raise the right arm; move the wrist side to side`, "
-                "then say `perform wave`. This runs a scripted simulation motion; "
-                "walking, grasping, and object pickup are not implemented."
-            )
-            if reference_ui is not None:
-                companion_history = gr.Chatbot(
-                    label="Conversation",
-                    height=420,
-                )
-                with gr.Row():
-                    companion_message = gr.Textbox(
-                        label="Message",
-                        placeholder="Ask Primus or teach a task...",
-                        scale=5,
-                    )
-                    companion_send = gr.Button("Send", variant="primary", scale=1)
-                companion_send.click(
-                    reference_ui.reference_companion_reply,
-                    inputs=[companion_message, companion_history],
-                    outputs=[companion_history, companion_message],
-                )
-                companion_message.submit(
-                    reference_ui.reference_companion_reply,
-                    inputs=[companion_message, companion_history],
-                    outputs=[companion_history, companion_message],
-                )
-            else:
-                gr.Markdown(
-                    "The reference companion dependencies are unavailable in "
-                    f"this environment: `{reference_ui_import_error}`."
-                )
     # =======================================================================
     # STATE
     # =======================================================================
-
-    if reference_ui is not None:
-        reference_tab.select(
-            reference_ui.start_viewer,
-            inputs=None,
-            outputs=[reference_viewport, reference_telemetry, reference_timer],
-            show_progress="hidden",
-        )
-        for tab in reference_cleanup_tabs:
-            tab.select(
-                reference_ui.stop_viewer,
-                inputs=None,
-                outputs=[reference_timer],
-                show_progress="hidden",
-            )
 
     chat_state = gr.State([])
     msg_state = gr.State([])
@@ -1059,7 +1067,7 @@ with gr.Blocks(
     # Create agent
     create_agent_btn.click(
         create_agent_and_refresh,
-        inputs=[agent_name, agent_domain, agent_instructions],
+        inputs=[agent_name, agent_domain, agent_instructions, edit_agent_id],
         outputs=[
             agent_notice,
             agent_select,
@@ -1107,6 +1115,10 @@ with gr.Blocks(
             agent_manager_view,
             doc_select,
             sidebar_view,
+            agent_name,
+            agent_domain,
+            agent_instructions,
+            edit_agent_id,
         ],
     )
 
@@ -1270,16 +1282,9 @@ with gr.Blocks(
     )
 
     voice_input_btn.click(
-        transcribe_voice_capture,
-        inputs=[voice_capture_placeholder, chatbot],
-        outputs=[chatbot, pending_chat_text],
-        js=VOICE_CAPTURE_JS,
-        show_progress="hidden",
-    ).then(
-        handlers.process_input,
+        keep_voice_input_state,
         inputs=[
-            pending_chat_text,
-            no_audio_state,
+            voice_capture_placeholder,
             chat_state,
             msg_state,
             agent_select,
@@ -1289,6 +1294,9 @@ with gr.Blocks(
             use_audio_output,
         ],
         outputs=OUTPUTS,
+        js=VOICE_CAPTURE_JS,
+        queue=False,
+        show_progress="hidden",
     )
 
     chatbot.clear(
@@ -1472,4 +1480,3 @@ if __name__ == "__main__":
         share=False,
         inbrowser=True,
     )
-

@@ -367,8 +367,9 @@ select:focus-visible,
 }}
 
 .resizable-sidebar {{
-    resize: horizontal !important;
-    overflow: auto !important;
+    resize: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     min-width: 240px !important;
     max-width: 430px !important;
 }}
@@ -405,17 +406,80 @@ select:focus-visible,
     margin-top: 3px;
 }}
 
-#sidebar-agent-picker .wrap {{
+#sidebar-agent-picker,
+.sidebar-agent-picker {{
+    display: block !important;
+    height: 220px !important;
+    min-height: 220px !important;
+    max-height: 220px !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+}}
+
+#sidebar-agent-picker > .wrap,
+#sidebar-agent-picker .wrap,
+.sidebar-agent-picker > .wrap,
+.sidebar-agent-picker .wrap {{
     display: flex !important;
     flex-direction: column !important;
     gap: 6px !important;
-    max-height: 510px;
-    overflow-y: auto;
+    align-items: stretch !important;
+    width: 100% !important;
+    height: 220px !important;
+    max-height: 220px !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
     padding-right: 3px;
+    scrollbar-gutter: stable !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: {BORDER} {BG_2} !important;
+    overscroll-behavior: contain !important;
+}}
+
+#sidebar-agent-picker .wrap::-webkit-scrollbar {{
+    width: 14px !important;
+}}
+
+#sidebar-agent-picker .wrap::-webkit-scrollbar-track {{
+    background: {BG_2} !important;
+    border-radius: 6px !important;
+}}
+
+#sidebar-agent-picker .wrap::-webkit-scrollbar-thumb {{
+    min-height: 42px !important;
+    background: {ACCENT_BLUE} !important;
+    border-radius: 6px !important;
+    border: 3px solid {BG_2} !important;
+}}
+
+#sidebar-agent-picker fieldset,
+.sidebar-agent-picker fieldset {{
+    height: 220px !important;
+    max-height: 220px !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+}}
+
+#sidebar-agent-picker fieldset::-webkit-scrollbar,
+.sidebar-agent-picker fieldset::-webkit-scrollbar {{
+    width: 14px !important;
+}}
+
+#sidebar-agent-picker fieldset::-webkit-scrollbar-thumb,
+.sidebar-agent-picker fieldset::-webkit-scrollbar-thumb {{
+    min-height: 42px !important;
+    background: {ACCENT_BLUE} !important;
+    border: 3px solid {BG_2} !important;
+    border-radius: 6px !important;
 }}
 
 #sidebar-agent-picker label {{
     align-items: center !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
     background: transparent !important;
     border: 1px solid transparent !important;
     border-radius: 9px !important;
@@ -425,13 +489,66 @@ select:focus-visible,
     font-weight: 700 !important;
     margin: 0 !important;
     padding: 9px !important;
+    overflow-wrap: anywhere !important;
     transition: background .15s ease, border-color .15s ease;
+}}
+
+#sidebar-agent-picker label span {{
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
 }}
 
 #sidebar-agent-picker label:hover,
 #sidebar-agent-picker label:has(input:checked) {{
     background: rgba(56, 189, 248, .08) !important;
     border-color: rgba(56, 189, 248, .32) !important;
+}}
+
+/* Keep agent selection scroll behavior identical to the Active Knowledge
+   list: one fixed outer viewport owns the scrollbar. */
+#agent-picker-scroll,
+.agent-picker-scroll {{
+    display: block !important;
+    flex: 0 0 440px !important;
+    height: 440px !important;
+    min-height: 440px !important;
+    max-height: 440px !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+    scrollbar-gutter: stable !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: {BORDER} {BG_2} !important;
+}}
+
+#agent-picker-scroll::-webkit-scrollbar,
+.agent-picker-scroll::-webkit-scrollbar {{
+    width: 9px !important;
+}}
+
+#agent-picker-scroll::-webkit-scrollbar-track,
+.agent-picker-scroll::-webkit-scrollbar-track {{
+    background: {BG_2} !important;
+    border-radius: 6px !important;
+}}
+
+#agent-picker-scroll::-webkit-scrollbar-thumb,
+.agent-picker-scroll::-webkit-scrollbar-thumb {{
+    background: {BORDER} !important;
+    border-radius: 6px !important;
+}}
+
+#agent-picker-scroll #sidebar-agent-picker,
+.agent-picker-scroll #sidebar-agent-picker,
+.agent-picker-scroll > #sidebar-agent-picker,
+.agent-picker-scroll .sidebar-agent-picker,
+.agent-picker-scroll > .sidebar-agent-picker,
+.agent-picker-scroll #sidebar-agent-picker .wrap,
+.agent-picker-scroll > #sidebar-agent-picker .wrap,
+.agent-picker-scroll .sidebar-agent-picker .wrap {{
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
 }}
 
 #sidebar-agent-picker input[type="radio"] {{
@@ -1817,33 +1934,47 @@ CSS += r"""
 
 /* Composer microphone button and separate recorder row */
 .voice-input-button {
-    width: 42px !important;
-    min-width: 42px !important;
+    width: 132px !important;
+    min-width: 132px !important;
     height: 42px !important;
-    border: 1px solid #294362 !important;
-    border-radius: 50% !important;
-    background: #10213a !important;
-    color: #e7f2ff !important;
-    font-size: 19px !important;
+    border: 1px solid rgba(164, 132, 255, .75) !important;
+    border-radius: 21px !important;
+    background: linear-gradient(135deg, #6d4aff, #9d7bff) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
     padding: 0 !important;
+    box-shadow: 0 4px 16px rgba(109, 74, 255, .25) !important;
+    transition: transform .18s ease, box-shadow .18s ease !important;
 }
 .voice-input-button button {
-    width: 42px !important;
-    min-width: 42px !important;
+    width: 132px !important;
+    min-width: 132px !important;
     height: 42px !important;
     padding: 0 !important;
-    border-radius: 50% !important;
-    background: #10213a !important;
-    color: #e7f2ff !important;
+    border-radius: 21px !important;
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
 }
 .voice-input-button button:hover {
-    background: #173253 !important;
-    border-color: #38bdf8 !important;
+    background: rgba(255, 255, 255, .12) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(109, 74, 255, .4) !important;
 }
 #voice-input-button.recording button {
-    background: #3b1720 !important;
-    border-color: #ef4444 !important;
-    color: #f87171 !important;
+    background: rgba(255, 82, 112, .2) !important;
+    color: #fff !important;
+    animation: voice-listening-pulse 1.35s ease-in-out infinite !important;
+}
+#voice-input-button.recording {
+    border-color: #ff7189 !important;
+    background: linear-gradient(135deg, #e44767, #ff7b8d) !important;
+}
+@keyframes voice-listening-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 113, 137, .45); }
+    50% { box-shadow: 0 0 0 7px rgba(255, 113, 137, 0); }
 }
 
 
@@ -1977,6 +2108,19 @@ label:has(input[type="checkbox"]) {
 .voice-reply-row {
     margin-top: 6px !important;
     gap: 8px !important;
+    align-items: center !important;
+}
+.voice-reply-row::before {
+    content: "🔊";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6d4aff, #9d7bff);
+    box-shadow: 0 3px 12px rgba(109, 74, 255, .3);
+    font-size: 16px;
 }
 .voice-reply-player {
     min-width: 0 !important;

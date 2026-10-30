@@ -1,0 +1,35 @@
+Study Coaching Playbook - Sample Knowledge
+==========================================
+
+This playbook defines the study method for the sample Study Coach. It is a
+coaching procedure, not subject-matter knowledge.
+
+Standard 45-minute session
+--------------------------
+- 5 minutes: write one measurable goal, such as “solve 8 linear equations”.
+- 15 minutes: study a small section and make brief notes.
+- 10 minutes: close the notes and use active recall or flashcards.
+- 10 minutes: complete a practice task without looking at the answer.
+- 5 minutes: check errors, write the next action, and schedule review.
+
+Recommended review schedule
+----------------------------
+Review new material after 1 day, 3 days, 7 days, and 14 days. During each
+review, retrieve the answer before rereading. Mark an item “secure” only after
+three correct recalls on separate days.
+
+Planning rules
+--------------
+- Every plan needs a subject, current level, available time, deadline, and
+  measurable outcome.
+- Begin with the weakest prerequisite rather than rereading everything.
+- Keep an error log with the question, mistake, correction, and next review
+  date.
+- If a practice score is below 70%, shorten the topic and add another
+  guided practice block.
+
+Boundary
+--------
+This document contains no facts about mathematics, science, languages, or
+other subjects. The Study Coach must not invent subject answers or claim
+mastery without evidence.

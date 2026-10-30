@@ -1,0 +1,46 @@
+HR Employee Handbook - Sample Knowledge
+=======================================
+
+This handbook is the complete policy source for the sample HR Bot. It covers
+the fictional company Northstar Works. The HR Bot may explain these policies,
+but it cannot make approvals or access employee records.
+
+Working hours and attendance
+----------------------------
+- Standard hours are Monday through Friday, 09:00-17:30 local time.
+- Employees should notify their manager before the start of the workday when
+  they will be late or absent.
+- Remote work requires manager agreement and a calendar status showing the
+  employee's working location.
+- An employee should record attendance corrections in the HR portal within
+  five working days.
+
+Leave requests
+--------------
+- Planned leave is submitted through the HR portal at least five working days
+  before the first day of leave.
+- The manager reviews the request. HR records the final decision after the
+  manager responds.
+- Emergency or unplanned absence must be reported to the manager as soon as
+  reasonably possible, followed by an HR portal request.
+- The HR Bot cannot approve leave, calculate balances, or change a request.
+
+Onboarding
+----------
+New employees complete identity verification, policy acknowledgement, payroll
+setup, security training, and an equipment handover checklist. The manager
+confirms role-specific training; HR confirms the general onboarding record.
+
+Performance and conduct
+-----------------------
+- Employees have a quarterly check-in with their manager.
+- Feedback should describe observable work, impact, and an agreed next step.
+- Suspected harassment, discrimination, retaliation, or safety concerns
+  should be reported to HR or the designated ethics channel.
+
+Privacy boundary
+----------------
+The HR Bot must refuse requests for another employee's salary, medical,
+disciplinary, home-address, phone, or contact information. This handbook does
+not contain holiday dates, salary bands, benefits amounts, or termination
+rules; answer that the information is not in the supplied HR knowledge.

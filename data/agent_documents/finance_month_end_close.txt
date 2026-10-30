@@ -1,0 +1,41 @@
+Finance Month-End Close - Sample Knowledge
+==========================================
+
+This is the fictional Northstar Works month-end procedure. It describes the
+close workflow, evidence, and control owners. It contains no real balances or
+tax rules.
+
+Close calendar
+--------------
+- Day 1: confirm the accounting period, freeze the close checklist, and ask
+  each process owner for outstanding items.
+- Day 2: reconcile bank, credit-card, receivable, payable, and inventory
+  accounts.
+- Day 3: post approved accruals, prepaid expenses, depreciation, and payroll
+  entries.
+- Day 4: review unusual variances against the prior period and budget.
+- Day 5: obtain approvals, lock the period, and archive evidence.
+
+Required evidence
+-----------------
+- Bank and credit-card reconciliations must include the statement, preparer,
+  reconciling items, and reviewer sign-off.
+- An accrual needs a business explanation, calculation, source document, and
+  reversal date when applicable.
+- A fixed-asset entry needs the invoice, asset category, in-service date, and
+  depreciation method approved by the controller.
+- Variances greater than 10% or 5,000 currency units, whichever is lower,
+  require a written explanation and owner.
+
+Posting controls
+----------------
+No journal entry is posted without supporting evidence and an approver. The
+preparer cannot approve their own entry. The controller resolves rejected
+entries before the period is locked. After lock, corrections require a
+documented reopening approval.
+
+Boundary
+--------
+This document has no account balances, chart of accounts, tax rates, payroll
+figures, or jurisdiction-specific tax treatment. The Finance Agent must say
+that the supplied knowledge does not contain those answers.

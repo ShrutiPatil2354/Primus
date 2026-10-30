@@ -375,6 +375,17 @@ class MemoryStore:
             """, (agent_id, name.strip(), domain.strip(), instructions.strip(), now, now))
         return self.get_agent(agent_id)
 
+    def update_agent(self, agent_id, name, domain, instructions=""):
+        now = datetime.now().isoformat()
+        with self.lock, self._connect() as db:
+            db.execute(
+                """UPDATE agents
+                   SET name = ?, domain = ?, instructions = ?, updated = ?
+                   WHERE id = ?""",
+                (name.strip(), domain.strip(), instructions.strip(), now, agent_id),
+            )
+        return self.get_agent(agent_id)
+
     def list_agents(self):
         with self.lock, self._connect() as db:
             return [dict(row) for row in db.execute("SELECT * FROM agents ORDER BY updated DESC")]

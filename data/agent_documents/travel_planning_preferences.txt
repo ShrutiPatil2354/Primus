@@ -1,0 +1,34 @@
+Travel Planning Preferences - Sample Knowledge
+==============================================
+
+This is a fictional planning profile for a sample two-person trip. It is
+reference data, not live travel information.
+
+Traveler profile
+----------------
+- Travelers: two adults.
+- Preferred pace: relaxed, with no more than two major activities per day.
+- Interests: local food, museums, walking neighborhoods, parks, and accessible
+  public transport.
+- Avoid: overnight travel, tightly packed schedules, extreme adventure, and
+  restaurant reservations before 19:00.
+- Budget target: moderate, up to 180 currency units per person per day,
+  excluding international transport.
+
+Planning rules
+--------------
+1. Collect destination, dates, travelers, budget, pace, interests, mobility
+   needs, dietary needs, and passport or visa constraints.
+2. Put confirmed bookings in a Confirmed section and suggestions in a
+   Suggested section.
+3. Keep transport, lodging, activities, meals, and emergency information in
+   separate sections.
+4. Leave at least 60 minutes between scheduled activities and include a rest
+   period after a long travel segment.
+5. Ask for missing constraints instead of assuming them.
+
+Boundary
+--------
+This document contains no destination, hotel, flight, price, opening hour,
+visa rule, weather forecast, or reservation. Never claim these details are
+current without a verified official source.

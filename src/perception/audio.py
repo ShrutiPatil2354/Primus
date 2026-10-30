@@ -97,7 +97,7 @@ def speak(text):
                 from piper import PiperVoice
                 _voice = PiperVoice.load(VOICE_MODEL)
             with wave.open(out_wav, "wb") as f:
-                _voice.synthesize(text[:400], f)
+                _voice.synthesize_wav(text[:400], f)
             if os.path.exists(out_wav) and os.path.getsize(out_wav) > 0:
                 executor.log("Speech", "Voice reply generated (Piper)", "Success", 1.0)
                 _prune_old_voice_files()

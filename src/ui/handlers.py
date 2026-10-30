@@ -1,5 +1,6 @@
 import html
 import os
+import re
 import time
 from datetime import datetime
 
@@ -14,6 +15,20 @@ VISION = vision.VISION
 
 LEARNING = {"active": False, "task": None, "skill": None, "examples": 0, "target": 20, "progress": 0.0}
 LEARN_LOG = []
+
+
+def _is_explicit_teaching(text):
+    """Distinguish teaching commands from questions mentioning learning."""
+    normalized = " ".join((text or "").strip().lower().split())
+    if not normalized or "?" in normalized:
+        return False
+    if ":" in normalized or ";" in normalized or "\n" in (text or ""):
+        return bool(re.match(r"^(please\s+)?(learn|teach|remember|store|encode)\b", normalized))
+    return bool(re.match(
+        r"^(please\s+)?(learn|teach|remember|store|encode)\b"
+        r"(\s+(this|that|the|a|an)\b|\s*$)",
+        normalized,
+    ))
 
 def agent_choices():
     choices = [("🌐 PRIMUS Default Knowledge (Shared Core)", "")]
@@ -224,9 +239,10 @@ def clear_active_agent_knowledge(agent_id):
     )
 
 
-def create_agent(name, domain, instructions):
+def create_agent(name, domain, instructions, edit_agent_id=None):
     name = (name or "").strip()
     domain = (domain or "").strip()
+    edit_agent_id = (edit_agent_id or "").strip()
     if not name or not domain:
         return ("<div class='reset-notice warning'>Agent name and domain are required.</div>",
                 gr.update(choices=agent_choices()),
@@ -238,9 +254,14 @@ def create_agent(name, domain, instructions):
                 agent_manager_html(),
                 gr.update(choices=[]),
                 sidebar_agents_html())
-    agent = STORE.create_agent(name, domain, instructions or "")
+    if edit_agent_id and STORE.get_agent(edit_agent_id):
+        agent = STORE.update_agent(edit_agent_id, name, domain, instructions or "")
+        action = "Updated"
+    else:
+        agent = STORE.create_agent(name, domain, instructions or "")
+        action = "Created"
     aid = agent["id"]
-    return (f"<div class='reset-notice success'>Created agent <b>{html.escape(agent['name'])}</b> ({html.escape(agent['domain'])}). Selected for management.</div>",
+    return (f"<div class='reset-notice success'>{action} agent <b>{html.escape(agent['name'])}</b> ({html.escape(agent['domain'])}). Selected for management.</div>",
             gr.update(choices=agent_choices(), value=aid),
             gr.update(choices=custom_agent_choices(), value=aid),
             agent_overview_html(aid),
@@ -272,6 +293,7 @@ def choose_existing_agent(agent_id):
     choices = task_choices(agent_id=agent_id)
     value = choices[0][1] if choices else None
     doc_choices = agent_document_choices(agent_id)
+    agent = STORE.get_agent(agent_id)
     return (gr.update(value=agent_id),
             agent_overview_html(agent_id),
             agent_knowledge_html(agent_id),
@@ -279,7 +301,11 @@ def choose_existing_agent(agent_id):
             gr.update(choices=choices, value=value),
             agent_manager_html(agent_id),
             gr.update(choices=doc_choices, value=doc_choices[0][1] if doc_choices else None),
-            sidebar_agents_html(agent_id))
+            sidebar_agents_html(agent_id),
+            agent.get("name", "") if agent else "",
+            agent.get("domain", "") if agent else "",
+            agent.get("instructions", "") if agent else "",
+            agent_id)
 
 
 def _read_document_text(file_obj):
@@ -767,7 +793,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
     if not text and not perception and not doc_notice:
         return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
                 memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
-                task_library_html(agent_id), agent_knowledge_html(agent_id), None, None, "", None, sidebar_agents_html(agent_id))
+                task_library_html(agent_id), agent_knowledge_html(agent_id), None, None, "", None, gr.skip())
 
     user_content = text
     if doc_file:
@@ -780,12 +806,17 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
     history = history + [{"role": "user", "content": user_content}]
     messages = messages + [[_t(), "You", user_content[:160]]]
 
-    kind = intent.classify(text) if text else "conversation"
+    detected_kind = intent.classify(text) if text else "conversation"
+    if detected_kind == "teach" and not _is_explicit_teaching(text):
+        detected_kind = "task_query" if "?" in (text or "") else "conversation"
+    kind = detected_kind
 
     # Override intent based on explicitly selected UI mode
     if "learn" in chat_mode.lower():
-        if kind == "task_query" or kind == "conversation":
-            kind = "teach"
+        # Learn Mode accepts explicit teaching only. Questions and general
+        # conversation must not be answered or stored as learned knowledge.
+        if (text or perception) and not doc_notice and detected_kind != "teach":
+            kind = "learn_mode_blocked"
     elif "ask" in chat_mode.lower():
         if kind == "teach":
             kind = "task_query"
@@ -805,11 +836,18 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             reference_cognition = None
             executor.log("Cognition", f"Reference cognition unavailable: {exc}", "Warning", None)
 
-    if not agent and text:
+    if not agent and text and kind != "learn_mode_blocked":
         memory.extract_facts(text)
 
     if doc_notice and not text:
         reply = doc_notice
+    elif kind == "learn_mode_blocked":
+        reply = (
+            "Learn Mode only learns tasks that you explicitly teach or documents "
+            "that you upload. Please toggle to Ask Mode to get answers."
+        )
+        if doc_notice:
+            reply = f"{doc_notice}\n\n{reply}"
     elif kind == "multiple":
         memory.add_episode("clarification", "Multiple requests submitted together")
         executor.log("System", "Multiple requests need clarification", "Blocked", None)
@@ -995,7 +1033,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
             memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
-            task_library_html(agent_id), agent_knowledge_html(agent_id), voice, voice, "", None, sidebar_agents_html(agent_id))
+            task_library_html(agent_id), agent_knowledge_html(agent_id), voice, voice, "", None, gr.skip())
 
 
 def clear_session(agent_id=None):
@@ -1053,6 +1091,3 @@ def timer_tick(agent_id=None):
 def boot():
     executor.log("System", "PRIMUS boot complete.", "Success", 1.0)
     return timer_tick()
-
-
-

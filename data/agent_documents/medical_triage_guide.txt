@@ -1,0 +1,33 @@
+Medical Triage Guide - Sample Knowledge
+=======================================
+
+This fictional guide is for educational triage only. It is not a diagnosis,
+prescription, or substitute for a licensed clinician.
+
+Emergency warning signs
+-----------------------
+Recommend emergency services immediately for severe difficulty breathing,
+severe or crushing chest pain, sudden weakness or paralysis on one side,
+new confusion, fainting, uncontrolled heavy bleeding, blue lips, a severe
+allergic reaction with breathing or swelling symptoms, or rapidly worsening
+condition. The person should not drive themselves if they may be seriously
+unwell.
+
+Same-day clinical review
+------------------------
+Recommend contacting a healthcare professional the same day for persistent
+high fever, dehydration signs such as very little urine, repeated vomiting,
+moderate breathing difficulty, new severe pain, or symptoms in a person who
+is pregnant, very young, elderly, or immunocompromised.
+
+General supportive guidance
+---------------------------
+For mild symptoms, rest, drink appropriate fluids, monitor changes, and use
+only medicines already approved for the person by a healthcare professional.
+If symptoms persist, worsen, or the person is worried, contact a clinician.
+
+Boundary
+--------
+This guide contains no diagnosis criteria, medication doses, disease
+predictions, or personal medical records. Do not diagnose from symptoms or
+recommend prescription changes. Do not request unnecessary health details.
