@@ -395,6 +395,15 @@ class PostgresMemoryStore:
         with self.engine.begin() as db:
             db.execute(text("INSERT INTO agent_feedback(agent_id,skill_id,event,reward,detail,t) VALUES (:agent_id,:skill_id,:event,:reward,:detail,:t)"), {"agent_id": agent_id, "skill_id": skill_id, "event": event, "reward": reward, "detail": detail, "t": datetime.now().isoformat()})
 
+    def agent_feedback_rows(self, agent_id, limit=30):
+        with self.engine.begin() as db:
+            rows = db.execute(text(
+                "SELECT t, event, skill_id, reward, detail FROM agent_feedback "
+                "WHERE agent_id = :agent_id ORDER BY id DESC LIMIT :limit"
+            ), {"agent_id": agent_id, "limit": limit}).fetchall()
+        return [[row[0][11:19], row[1], row[2] or "", row[3] or "--", row[4]]
+                for row in rows]
+
     def delete_agent_document(self, agent_id, doc_id):
         with self.engine.begin() as db:
             deleted = db.execute(text(

@@ -538,6 +538,16 @@ class MemoryStore:
             db.execute("INSERT INTO agent_feedback(agent_id, skill_id, event, reward, detail, t) VALUES (?, ?, ?, ?, ?, ?)",
                        (agent_id, skill_id, event, reward, detail, datetime.now().isoformat()))
 
+    def agent_feedback_rows(self, agent_id, limit=30):
+        with self.lock, self._connect() as db:
+            rows = db.execute(
+                "SELECT t, event, skill_id, reward, detail FROM agent_feedback "
+                "WHERE agent_id = ? ORDER BY id DESC LIMIT ?",
+                (agent_id, limit),
+            ).fetchall()
+        return [[row["t"][11:19], row["event"], row["skill_id"] or "",
+                 row["reward"] or "--", row["detail"]] for row in rows]
+
     def delete_agent_document(self, agent_id, doc_id):
         with self.lock, self._connect() as db:
             deleted = db.execute(

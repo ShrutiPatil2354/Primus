@@ -275,6 +275,7 @@ def create_agent(name, domain, instructions, edit_agent_id=None):
 
 def select_agent(agent_id):
     agent_id = (agent_id or "").strip()
+    selected_custom_id = agent_id if STORE.get_agent(agent_id) else None
     choices = task_choices(agent_id=agent_id)
     value = choices[0][1] if choices else None
     doc_choices = agent_document_choices(agent_id)
@@ -282,7 +283,7 @@ def select_agent(agent_id):
             agent_knowledge_html(agent_id),
             task_library_html(agent_id),
             gr.update(choices=choices, value=value),
-            gr.update(value=agent_id),
+            gr.update(choices=custom_agent_choices(), value=selected_custom_id),
             agent_manager_html(agent_id),
             gr.update(choices=doc_choices, value=doc_choices[0][1] if doc_choices else None),
             sidebar_agents_html(agent_id))
@@ -290,11 +291,12 @@ def select_agent(agent_id):
 
 def choose_existing_agent(agent_id):
     agent_id = (agent_id or "").strip()
+    selected_custom_id = agent_id if STORE.get_agent(agent_id) else None
     choices = task_choices(agent_id=agent_id)
     value = choices[0][1] if choices else None
     doc_choices = agent_document_choices(agent_id)
     agent = STORE.get_agent(agent_id)
-    return (gr.update(value=agent_id),
+    return (gr.update(choices=agent_choices(), value=agent_id if agent_id else ""),
             agent_overview_html(agent_id),
             agent_knowledge_html(agent_id),
             task_library_html(agent_id),
@@ -346,7 +348,7 @@ def upload_agent_document(agent_id, file_obj):
         return ("<div class='reset-notice warning'>Could not extract text from file. Supported: .txt, .md, .csv, .json, .pdf, .docx</div>",
                 None, agent_manager_html(agent_id), agent_knowledge_html(agent_id), agent_overview_html(agent_id), gr.update(choices=agent_document_choices(agent_id)), sidebar_agents_html(agent_id))
     doc = STORE.add_agent_document(agent_id, name, content[:20000])
-    STORE.agent_feedback(agent_id, None, "document", 0.5, f"Uploaded document {doc['name']}")
+    STORE.agent_feedback(agent_id, None, "learnt", 0.75, f"Uploaded document {doc['name']}")
     doc_choices = agent_document_choices(agent_id)
     return (f"<div class='reset-notice success'>Uploaded '<b>{html.escape(doc['name'])}</b>' ({len(content)} chars) into {html.escape(agent['name'])}.</div>",
             None, agent_manager_html(agent_id), agent_knowledge_html(agent_id), agent_overview_html(agent_id), gr.update(choices=doc_choices, value=doc_choices[0][1] if doc_choices else None), sidebar_agents_html(agent_id))
@@ -433,10 +435,10 @@ def show_reset_confirmation():
             gr.update(visible=True), gr.update(visible=True))
 
 
-def learning_progress_html():
+def learning_progress_html(agent_id=None):
     st = memory.stats()
-    retained = st["skills"]
-    feedback = STORE.feedback_rows(1)
+    retained = len(STORE.list_agent_skills(agent_id)) if agent_id else st["skills"]
+    feedback = STORE.agent_feedback_rows(agent_id, 1) if agent_id else STORE.feedback_rows(1)
     latest = feedback[0][4] if feedback else "No feedback recorded yet."
     return f'''<div class="progress-grid">
       <div class="progress-panel"><div><b>Continual task memory</b><span>{retained} retained tasks · {st['episodes']} learning events</span></div>
@@ -509,28 +511,47 @@ def executor_table_html(rows=None):
     )
 
 
-def learning_table_html(rows=None):
+def learning_table_html(rows=None, agent_id=None):
     return _rows_to_html(
-        learning_rows() if rows is None else rows,
+        learning_rows(agent_id) if rows is None else rows,
         ["Time", "Event", "Detail", "Value"],
         empty_text="No learning events yet.",
         title="Learning Activity",
     )
 
 
-def memory_table_html(rows=None):
+def memory_table_html(rows=None, agent_id=None):
     return _rows_to_html(
-        memory_rows() if rows is None else rows,
+        memory_rows(agent_id) if rows is None else rows,
         ["Time", "Type", "Detail"],
         empty_text="No episodic memory events yet.",
         title="Episodic Memory",
     )
 
 
-def learning_rows():
-    rows = [[row[0], row[1], row[4], row[3]] for row in STORE.feedback_rows(30)]
-    rows.extend(LEARN_LOG)
-    return rows[:30]
+def learning_rows(agent_id=None):
+    def activity_row(row):
+        event = row[1]
+        if event in {"teach", "learned", "document", "edit"}:
+            event = "learnt"
+        elif event in {"document_recall", "perform"}:
+            event = "recall"
+        elif event == "question":
+            event = "unknown" if row[3] == 0 else "recall"
+        return [row[0], event, row[4], row[3]]
+
+    rows = []
+    if not agent_id:
+        rows = [activity_row(row) for row in STORE.feedback_rows(30)]
+    else:
+        rows.extend(activity_row(row)
+                    for row in STORE.agent_feedback_rows(agent_id, 30))
+    if not agent_id:
+        rows.extend(
+            [row[0], "learnt", row[2], row[3]]
+            for row in LEARN_LOG
+        )
+    return sorted(rows, key=lambda row: str(row[0]), reverse=True)[:60]
 
 
 def learning_html():
@@ -684,10 +705,10 @@ def save_task(skill_id, name, steps_text, agent_id=None):
         return "Name and at least one step are required.", task_choices(agent_id=agent_id), task_library_html(agent_id), agent_knowledge_html(agent_id), name, steps_text, task_editor(skill_id, agent_id)[2]
     if agent_id:
         skill = STORE.update_agent_skill(agent_id, skill_id, name, steps)
-        STORE.agent_feedback(agent_id, skill_id, "edit", None, "Agent task procedure updated")
+        STORE.agent_feedback(agent_id, skill_id, "learnt", 0.5, "Agent task procedure updated")
     else:
         skill = memory.update_skill(skill_id, name, steps)
-        STORE.record_feedback(skill_id, "edit", None, "Task procedure updated")
+        STORE.record_feedback(skill_id, "learned", 0.5, "Task procedure updated")
     memory.add_episode("edit", f"Updated skill {skill_id}")
     return "Task saved.", task_choices(agent_id=agent_id), task_library_html(agent_id), agent_knowledge_html(agent_id), skill["name"], "\n".join(skill["steps"]), task_editor(skill_id, agent_id)[2]
 
@@ -722,7 +743,12 @@ def delete_task(skill_id, confirmed, agent_id=None):
     return "Task deleted.", choices, task_library_html(agent_id), agent_knowledge_html(agent_id), editor[0], editor[1], editor[2], False
 
 
-def memory_rows():
+def memory_rows(agent_id=None):
+    if agent_id:
+        return [
+            [row[0], row[1], row[4]]
+            for row in STORE.agent_feedback_rows(agent_id, 30)
+        ]
     return memory.episodic_rows(30)
 
 
@@ -782,7 +808,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
         if content:
             if agent_id:
                 doc = STORE.add_agent_document(agent_id, name, content[:20000])
-                STORE.agent_feedback(agent_id, None, "document", 0.5, f"Uploaded document {doc['name']}")
+                STORE.agent_feedback(agent_id, None, "learnt", 0.75, f"Uploaded document {doc['name']}")
                 doc_notice = f"📥 Knowledge Document '<b>{html.escape(name)}</b>' ({len(content)} chars) ingested strictly into <b>{html.escape(agent_name)}</b>.\nThis knowledge is private to {html.escape(agent_name)} and will NOT be shared with other agents."
             else:
                 doc_notice = f"📥 Knowledge Document '<b>{html.escape(name)}</b>' ({len(content)} chars) ingested into Default Shared Memory."
@@ -791,8 +817,8 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             doc_notice = f"⚠️ Could not extract text from attached file '{html.escape(str(name))}'."
 
     if not text and not perception and not doc_notice:
-        return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
-                memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
+        return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(agent_id),
+                memory_table_html(agent_id=agent_id), executor.plan_html(), learning_html(), memory_html(),
                 task_library_html(agent_id), agent_knowledge_html(agent_id), None, None, "", None, gr.skip())
 
     user_content = text
@@ -810,7 +836,6 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
     if detected_kind == "teach" and not _is_explicit_teaching(text):
         detected_kind = "task_query" if "?" in (text or "") else "conversation"
     kind = detected_kind
-
     # Override intent based on explicitly selected UI mode
     if "learn" in chat_mode.lower():
         # Learn Mode accepts explicit teaching only. Questions and general
@@ -894,7 +919,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
         if steps:
             if agent:
                 sid, skill = STORE.add_agent_skill(agent_id, name, steps)
-                STORE.agent_feedback(agent_id, sid, "teach", 0.5, f"Stored {len(steps)} teaching steps")
+                STORE.agent_feedback(agent_id, sid, "learnt", 0.5, f"Stored {len(steps)} teaching steps")
             else:
                 sid, skill = memory.add_skill(name, steps, perception)
                 STORE.record_feedback(sid, "learned", 0.5, f"Stored {len(steps)} teaching steps")
@@ -921,7 +946,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             executor.start_plan(sid, skill.get("steps", []))
             memory.add_episode("perform", f"Executed skill {sid}")
             if agent:
-                STORE.agent_feedback(agent_id, sid, "perform", 1.0, "Known procedure selected")
+                STORE.agent_feedback(agent_id, sid, "recall", 1.0, "Known procedure selected")
             else:
                 STORE.record_feedback(sid, "perform", 1.0, "Known procedure selected for execution")
             reply = f"Executing learned skill '{skill.get('name')}'. Live task plan below."
@@ -955,7 +980,7 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
                 excerpt = _document_excerpt(document, text)
                 memory.add_episode("recall", f"Recalled document {document['id']}")
                 executor.log("Memory", f"Retrieved document {document['id']}", "Success", 0.7)
-                STORE.agent_feedback(agent_id, None, "document_recall", 1.0, f"Answered from {document['name']}")
+                STORE.agent_feedback(agent_id, None, "recall", 1.0, f"Answered from {document['name']}")
                 if llm.online():
                     doc_prompt = (
                         f"You are a strict tabula-rasa agent named '{agent_name}'. "
@@ -1031,8 +1056,9 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             executor.log("Speech", f"Voice reply failed: {exc}", "Error", None)
             voice = None
 
-    return (history, history, message_table_html(messages), messages, executor_table_html(), learning_table_html(),
-            memory_table_html(), executor.plan_html(), learning_html(), memory_html(),
+    return (history, history, message_table_html(messages), messages, executor_table_html(),
+            learning_table_html(agent_id=agent_id),
+            memory_table_html(agent_id=agent_id), executor.plan_html(), learning_html(), memory_html(),
             task_library_html(agent_id), agent_knowledge_html(agent_id), voice, voice, "", None, gr.skip())
 
 
@@ -1083,9 +1109,10 @@ def timer_tick(agent_id=None):
 
     m = monitor.sample()
     return (monitor.stats_html(m), monitor.panels_html(m),
-            executor.plan_html(), learning_html(), executor_table_html(), learning_table_html(),
-            memory_table_html(), memory_html(), task_library_html(agent_id),
-            agent_knowledge_html(agent_id), learning_progress_html())
+            executor.plan_html(), learning_html(), executor_table_html(),
+            learning_table_html(agent_id=agent_id), memory_table_html(agent_id=agent_id),
+            memory_html(), task_library_html(agent_id),
+            agent_knowledge_html(agent_id), learning_progress_html(agent_id))
 
 
 def boot():
