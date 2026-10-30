@@ -98,12 +98,12 @@
 <!-- ================= HERO ================= -->
 <header class="hero">
   <h1>PRIMUS</h1>
-  <p class="tag"><b>Zero-Knowledge Real-Time Cognitive Agent</b> — a brain-inspired, <b>tabula rasa</b> AI that starts knowing <i>nothing</i> and learns only from its teacher, through text, speech, and live vision. This dashboard explains what is happening inside the repository: the tech stack, the memory cortex, retrieval, the learning loop, and <b>why every piece was chosen</b>.</p>
+  <p class="tag"><b>Zero-Knowledge Real-Time Cognitive Agent Studio</b> — a brain-inspired, <b>tabula rasa</b> system where each custom agent starts with isolated knowledge and learns only from its teacher through text, documents, speech, and live vision. This dashboard explains the current repository architecture, agent lifecycle, retrieval gates, learning activity, and <b>why every piece was chosen</b>.</p>
   <div class="chips">
     <span class="chip"><b>UI</b> Gradio 6 · :7860</span>
     <span class="chip"><b>LLM</b> Ollama · Qwen2.5-7B-Instruct</span>
     <span class="chip"><b>Memory</b> 5 cortices · SQLite → Postgres+pgvector</span>
-    <span class="chip"><b>Voice</b> Whisper STT · Piper TTS</span>
+    <span class="chip"><b>Voice</b> Browser speech recognition · Piper TTS</span>
     <span class="chip"><b>Vision</b> YOLOv8n + MediaPipe · :8000</span>
     <span class="chip"><b>Neural core</b> C++17 · pybind11</span>
     <span class="chip"><b>RL</b> Confidence + meta-RL (PyTorch)</span>
@@ -125,11 +125,17 @@
   <a href="#resilience">9 · Fallbacks &amp; resilience</a>
   <a href="#decisions">10 · Design decisions</a>
   <a href="#run">11 · Run &amp; configure</a>
+  <a href="#agents">12 · Custom agents</a>
+  <a href="#knowledge">13 · Knowledge isolation</a>
+  <a href="#modes">14 · Ask &amp; Learn modes</a>
+  <a href="#voice">15 · Current voice flow</a>
+  <a href="#activity">16 · Learning activity</a>
+  <a href="#boundaries">17 · Current boundaries</a>
 </nav>
 <!-- ================= 1. OVERVIEW ================= -->
 <section id="overview">
   <div class="sec-head"><span class="no">SECTION 1</span><h2>Big picture — what is actually happening</h2></div>
-  <p class="sec-sub">PRIMUS is one Python process serving a web dashboard. Every message runs the same pipeline: <b>perceive → classify intent → retrieve from memory → answer or act → store what happened → speak</b>. Nothing is answered from pretrained world knowledge — the LLM is constrained to use <i>only</i> what the local memory cortex contains.</p>
+  <p class="sec-sub">PRIMUS is one Python process serving a web dashboard. Every message runs the same pipeline: <b>perceive → classify intent → retrieve from the selected agent → answer or act → store what happened → speak</b>. Nothing is answered from pretrained world knowledge — the LLM is constrained to use <i>only</i> what the selected agent's local knowledge contains.</p>
   <div class="grid g3">
     <div class="card">
       <h3><span class="dot" style="background:var(--blue)"></span>The agent loop</h3>
@@ -138,7 +144,7 @@
     </div>
     <div class="card">
       <h3><span class="dot" style="background:var(--green)"></span>The zero-prior guarantee</h3>
-      <p>Task and fact questions are answered <b>only</b> from learned memory; unknown tasks are <b>refused</b> ("Teach me first"). The Knowledge Gate runs <i>before</i> the LLM, and the LLM gets a strict tabula-rasa system prompt so it may only rephrase taught knowledge. Wipe <code>data/primus_memory.db</code> → a true blank slate.</p>
+      <p>Task and fact questions are answered <b>only</b> from the selected agent's learned memory; unknown tasks are <b>refused</b> ("Teach me first"). The Knowledge Gate runs <i>before</i> the LLM, and the LLM gets a strict tabula-rasa system prompt so it may only rephrase taught knowledge. Wipe <code>data/primus_memory.db</code> → a true blank slate.</p>
       <div class="why"><b>WHY</b> — this is the project's core claim: local, auditable knowledge instead of hidden pretrained guesses. Demos: "How to make tea?" → refused; teach it; ask again → answered from your steps only.</div>
     </div>
     <div class="card">
@@ -587,6 +593,120 @@
       <li><code>knowledge_meta_policy.pt</code> — meta-RL checkpoint · <code>robot_training.jsonl</code> — exported episodes · <code>snapshot.jpg</code> — camera snapshot</li>
     </ul>
   </div>
+</section>
+
+<!-- ================= 12. CUSTOM AGENTS ================= -->
+<section id="agents">
+  <div class="sec-head"><span class="no">SECTION 12</span><h2>Custom-agent studio — create, select, and edit</h2></div>
+  <p class="sec-sub">The current product flow keeps agent management inside the existing workspace instead of adding a separate administration surface. The selected agent is carried through chat, learning, memory, documents, and activity.</p>
+  <div class="grid g3">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>Create</h3>
+      <p>In <b>Build Your Agent</b>, enter the name, domain, and optional system prompt. The handler validates the fields, creates the agent, refreshes the sidebar choices, and clears the fields only after success.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--purple)"></span>Edit</h3>
+      <p>Select an existing agent and the same fields are populated. The same action updates that agent through <code>update_agent()</code>; no second editor or extra page is required.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>Switch safely</h3>
+      <p>Agent dropdown updates return both the valid <b>choices</b> and selected <b>value</b>. Chat output preserves the sidebar selection while processing so an active agent cannot unexpectedly change.</p>
+    </div>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — creation and editing use one familiar form, while a hidden edit ID distinguishes create from update. This keeps the UI small and prevents agent-switching state errors.</div>
+</section>
+
+<!-- ================= 13. KNOWLEDGE ISOLATION ================= -->
+<section id="knowledge">
+  <div class="sec-head"><span class="no">SECTION 13</span><h2>Knowledge isolation — documents become usable agent knowledge</h2></div>
+  <p class="sec-sub">A document is not treated as a decorative attachment. Its readable content is stored against the selected agent and becomes retrievable evidence for future questions.</p>
+  <div class="steps">
+    <div class="step"><div class="t"><b>Select an agent and upload a document.</b><span>The upload handler uses the selected agent ID, reads supported text/document content, limits the stored text to 20,000 characters, and shows the basename rather than a temporary directory.</span></div><span class="route pill b">handlers.py</span></div>
+    <div class="step"><div class="t"><b>Persist the document and its searchable content.</b><span>The record is stored in <code>agent_documents</code>; it is not placed in another agent's memory or in a global knowledge bucket.</span></div><span class="route pill g">agent_documents</span></div>
+    <div class="step"><div class="t"><b>Answer only when retrieval finds supporting content.</b><span>Token-overlap retrieval returns bounded excerpts. A hit can support an answer; a miss produces an explicit unknown response instead of a generated guess.</span></div><span class="route pill a">knowledge gate</span></div>
+    <div class="step"><div class="t"><b>Record the learning event.</b><span>The confirmation stays user-friendly: the agent learned from the file and can use it to answer questions. The document-learning reward is <b>0.75</b>.</span></div><span class="route pill p">learnt · 0.75</span></div>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — the file is a source of knowledge, not merely an upload event. Agent-scoped storage makes it possible to teach HR, Legal, Finance, or any other agent without cross-agent contamination.</div>
+</section>
+
+<!-- ================= 14. ASK AND LEARN ================= -->
+<section id="modes">
+  <div class="sec-head"><span class="no">SECTION 14</span><h2>Ask Mode and Learn Mode — two explicit behaviors</h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>Ask Mode</h3>
+      <ul class="clean">
+        <li>Classifies the input as conversation, task query, or document question.</li>
+        <li>Searches the selected agent's skills and documents before calling the LLM.</li>
+        <li>Known content is answered from retrieved knowledge and records <b>recall = 1.0</b>.</li>
+        <li>Missing content is returned as unknown and records <b>unknown = 0.0</b>.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>Learn Mode</h3>
+      <ul class="clean">
+        <li>Accepts explicit teaching such as a named task, steps, or a supported document.</li>
+        <li>Question-shaped or general conversation is not silently stored as knowledge.</li>
+        <li>Explicit task teaching/editing records <b>learnt = 0.5</b>.</li>
+        <li>Uploaded document learning records <b>learnt = 0.75</b>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — separating asking from teaching protects the zero-prior promise. A question cannot accidentally become a new skill just because it contains words such as “learn” or “teach”.</div>
+</section>
+
+<!-- ================= 15. CURRENT VOICE ================= -->
+<section id="voice">
+  <div class="sec-head"><span class="no">SECTION 15</span><h2>Current voice flow — listen, send, and reply</h2></div>
+  <div class="grid g3">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--blue)"></span>1 · Start listening</h3>
+      <p>The mic control starts browser speech recognition and changes visibly to <b>Stop Listening</b>. The browser captures speech without requiring a separate audio-upload step.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--amber)"></span>2 · Stop and review</h3>
+      <p>Stopping recognition places the transcript in the normal chat textbox. The user can review or edit the text, then press <b>Send</b>; the transcript follows the same 17-output pipeline as typed questions.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--purple)"></span>3 · Hear the answer</h3>
+      <p>When voice reply is enabled, Piper generates a WAV first. If unavailable, <code>edge-tts</code> is attempted. A TTS failure is logged and never blocks the text answer.</p>
+    </div>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — speech recognition is an input convenience, not a second chat pipeline. The transcript enters the same validated path, and voice output remains an optional presentation layer.</div>
+</section>
+
+<!-- ================= 16. LEARNING ACTIVITY ================= -->
+<section id="activity">
+  <div class="sec-head"><span class="no">SECTION 16</span><h2>Learning tab — scoped memory, activity, and scores</h2></div>
+  <p class="sec-sub">The Learning tab is refreshed by <code>gr.Timer(1.5)</code>. Every refresh reads persisted state for the currently selected agent, sorts latest activity first, and redraws the existing panels.</p>
+  <div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Activity label</th><th>Meaning</th><th>Value</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td class="k">recall</td><td>Question answered from a matching skill or document</td><td><span class="pill g">1.0</span></td><td><code>document_recall</code>, <code>perform</code></td></tr>
+      <tr><td class="k">unknown</td><td>Knowledge was not found and the agent refused to invent</td><td><span class="pill r">0.0</span></td><td>unknown / rejected query</td></tr>
+      <tr><td class="k">learnt</td><td>Explicit task teaching or editing</td><td><span class="pill a">0.5</span></td><td>teach / edit</td></tr>
+      <tr><td class="k">learnt</td><td>Document content stored as agent knowledge</td><td><span class="pill p">0.75</span></td><td>document learning</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — users see three meaningful concepts—recall, unknown, and learnt—instead of implementation event names. Selecting another agent changes both Activity and Memory to that agent's records.</div>
+</section>
+
+<!-- ================= 17. CURRENT BOUNDARIES ================= -->
+<section id="boundaries">
+  <div class="sec-head"><span class="no">SECTION 17</span><h2>Current boundaries and removed surfaces</h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--red)"></span>Knowledge boundary</h3>
+      <p>Retrieval currently uses deterministic token overlap and bounded excerpts in the active SQLite path. It is auditable and local, but it is not semantic embedding search. Unsupported or absent knowledge must remain unknown.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>Product boundary</h3>
+      <p>The old Reference Simulator and Reference Companion pages are removed from the visible flow and lifecycle wiring. The product surface now centers on Workspace, Build Your Agent, Learning, Perception, System, and optional Cognition Lab.</p>
+    </div>
+  </div>
+  <div class="why"><b>WHY THIS SHAPE</b> — the dashboard documents the behavior users can actually run today, rather than describing reference pages or future capabilities as if they were part of the active product.</div>
 </section>
 
 <footer>PRIMUS Architecture Dashboard · generated from source inspection of <code>app.py</code>, <code>src/</code> and <code>cpp_core/</code> — consistent with <code>ARCHITECTURE.md</code> · keep both updated when layers change · self-contained HTML, open offline in any browser.</footer>

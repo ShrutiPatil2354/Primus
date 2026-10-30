@@ -350,7 +350,7 @@ def upload_agent_document(agent_id, file_obj):
     doc = STORE.add_agent_document(agent_id, name, content[:20000])
     STORE.agent_feedback(agent_id, None, "learnt", 0.75, f"Uploaded document {doc['name']}")
     doc_choices = agent_document_choices(agent_id)
-    return (f"<div class='reset-notice success'>Uploaded '<b>{html.escape(doc['name'])}</b>' ({len(content)} chars) into {html.escape(agent['name'])}.</div>",
+    return (f"<div class='reset-notice success'><b>{html.escape(agent['name'])}</b> learned from <b>{html.escape(doc['name'])}</b> and can now use it to answer your questions.</div>",
             None, agent_manager_html(agent_id), agent_knowledge_html(agent_id), agent_overview_html(agent_id), gr.update(choices=doc_choices, value=doc_choices[0][1] if doc_choices else None), sidebar_agents_html(agent_id))
 
 
@@ -809,9 +809,9 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
             if agent_id:
                 doc = STORE.add_agent_document(agent_id, name, content[:20000])
                 STORE.agent_feedback(agent_id, None, "learnt", 0.75, f"Uploaded document {doc['name']}")
-                doc_notice = f"📥 Knowledge Document '<b>{html.escape(name)}</b>' ({len(content)} chars) ingested strictly into <b>{html.escape(agent_name)}</b>.\nThis knowledge is private to {html.escape(agent_name)} and will NOT be shared with other agents."
+                doc_notice = f"📥 <b>{html.escape(agent_name)}</b> learned from <b>{html.escape(name)}</b> and can now use it to answer your questions."
             else:
-                doc_notice = f"📥 Knowledge Document '<b>{html.escape(name)}</b>' ({len(content)} chars) ingested into Default Shared Memory."
+                doc_notice = f"📥 PRIMUS learned from <b>{html.escape(name)}</b> and can now use it to answer your questions."
             executor.log("Document", f"Ingested {name} into {agent_name}", "Success", 1.0)
         else:
             doc_notice = f"⚠️ Could not extract text from attached file '{html.escape(str(name))}'."
@@ -823,7 +823,10 @@ def process_input(text, audio_path, history, messages, agent_id=None, use_camera
 
     user_content = text
     if doc_file:
-        user_content = f"📎 [Attached: {getattr(doc_file, 'name', 'Document')}]\n{user_content}".strip()
+        attached_name = os.path.basename(
+            str(getattr(doc_file, "name", "Document"))
+        )
+        user_content = f"📎 [Attached: {attached_name}]\n{user_content}".strip()
     if not user_content:
         user_content = "Uploaded document for active agent."
     if perception:

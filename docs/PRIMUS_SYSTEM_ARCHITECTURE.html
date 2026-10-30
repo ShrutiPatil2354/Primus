@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PRIMUS System Architecture and Flow Guide</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });
+  </script>
+  <style>
+    :root {
+      --bg: #05080f;
+      --card: #080f1b;
+      --line: #1c3252;
+      --line2: #24406b;
+      --ink: #e5e7eb;
+      --muted: #8b96ab;
+      --dim: #5b6b85;
+      --blue: #38bdf8;
+      --green: #22c55e;
+      --purple: #a855f7;
+      --amber: #f59e0b;
+      --red: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 500px at 85% -5%, rgba(56,189,248,.10), transparent 60%),
+        radial-gradient(800px 500px at 0% 10%, rgba(168,85,247,.08), transparent 60%),
+        var(--bg);
+      font: 16px/1.6 "Segoe UI", Roboto, Arial, sans-serif;
+      padding: 28px 18px 60px;
+    }
+    main { max-width: 1120px; margin: 0 auto; background: transparent; }
+    header {
+      padding: 30px 30px 24px;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(56,189,248,.08), rgba(8,15,27,.9) 55%);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.9rem, 4vw, 2.9rem);
+      letter-spacing: .12em;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--blue), var(--purple) 60%, var(--green));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    header p { max-width: 900px; margin: 8px 0 0; color: var(--muted); }
+    header p b { color: var(--ink); }
+    .content { padding: 0 0 20px; }
+    .content > h2 {
+      margin-top: 34px;
+      color: var(--ink);
+      border: 0;
+      padding: 0;
+      font-size: 1.45rem;
+      letter-spacing: .02em;
+    }
+    h3 { margin-top: 30px; color: var(--ink); }
+    h4 { margin-bottom: 4px; }
+    a { color: var(--blue); }
+    code, pre {
+      font-family: Consolas, "Courier New", monospace;
+      background: #0d1a2e;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #9fd6f7;
+    }
+    code { padding: 1px 6px; font-size: .85em; }
+    pre { padding: 16px; overflow-x: auto; border: 1px solid var(--line); }
+    .callout {
+      margin: 20px 0;
+      padding: 16px 18px;
+      border-left: 3px solid var(--blue);
+      border-radius: 0 10px 10px 0;
+      background: rgba(56,189,248,.06);
+      color: #c7d2e2;
+    }
+    .callout.good { border-color: var(--green); background: rgba(34,197,94,.06); }
+    .callout.warn { border-color: var(--amber); background: rgba(245,158,11,.06); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 16px; }
+    .card { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+    .card h3 { margin-top: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: .86rem; }
+    th { color: var(--blue); text-align: left; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--line2); }
+    td { padding: 9px 10px; border-bottom: 1px solid rgba(28,50,82,.55); color: var(--muted); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    .diagram { margin: 20px 0; padding: 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+    .small { color: var(--muted); font-size: .92rem; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; color: var(--blue); border: 1px solid var(--line2); background: rgba(56,189,248,.08); font-size: .82rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .chip { font-size: .78rem; border: 1px solid var(--line2); background: rgba(56,189,248,.06); border-radius: 999px; padding: 5px 12px; white-space: nowrap; color: var(--muted); }
+    .chip b { color: var(--blue); }
+    nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 8px; position: sticky; top: 8px; z-index: 50; background: rgba(5,8,15,.88); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+    nav.toc a { color: var(--muted); text-decoration: none; font-size: .8rem; border: 1px solid transparent; padding: 4px 10px; border-radius: 999px; }
+    nav.toc a:hover { color: var(--blue); border-color: var(--line2); background: rgba(56,189,248,.06); }
+    .why { margin-top: 12px; border-left: 3px solid var(--green); background: rgba(34,197,94,.06); border-radius: 0 10px 10px 0; padding: 10px 12px; font-size: .84rem; color: #c7d2e2; }
+    .why b { color: var(--green); letter-spacing: .06em; font-size: .75rem; }
+    footer { margin-top: 44px; padding: 18px 0 0; color: var(--dim); background: transparent; border-top: 1px solid var(--line); }
+    @media (max-width: 720px) {
+      body { padding-left: 10px; padding-right: 10px; }
+      header h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="badge">PRIMUS</div>
+    <h1>System Architecture and End-to-End Flow Guide</h1>
+    <p>
+      A presentation-ready explanation of the local-first agent studio:
+      its layers, agent lifecycle, knowledge isolation, Ask/Learn behavior,
+      voice pipeline, persistence, and live Learning &amp; Memory dashboard.
+    </p>
+    <p class="small">Implementation reference: <code>app.py</code>, <code>src/ui/handlers.py</code>, <code>src/core/</code>, and <code>src/perception/</code>.</p>
+    <div class="chips">
+      <span class="chip"><b>UI</b> Gradio 6</span>
+      <span class="chip"><b>LLM</b> Ollama / Qwen</span>
+      <span class="chip"><b>Memory</b> Agent-isolated SQLite</span>
+      <span class="chip"><b>Voice</b> Speech recognition + Piper TTS</span>
+      <span class="chip"><b>Vision</b> Camera context</span>
+      <span class="chip"><b>Refresh</b> 1.5-second live tick</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Architecture sections">
+    <a href="#overview">1 · Overview</a>
+    <a href="#context">2 · Context</a>
+    <a href="#layers">3 · Layers</a>
+    <a href="#startup">4 · Startup</a>
+    <a href="#agents">5 · Agents</a>
+    <a href="#data">6 · Data</a>
+    <a href="#upload">7 · Upload</a>
+    <a href="#ask">8 · Ask</a>
+    <a href="#learn">9 · Learn</a>
+    <a href="#voice">10 · Voice</a>
+    <a href="#dashboard">11 · Dashboard</a>
+    <a href="#security">12 · Guardrails</a>
+  </nav>
+
+  <div class="content">
+    <section id="overview">
+    <h2>1. Executive summary</h2>
+    <p>
+      PRIMUS is a Gradio-based, local-first AI agent studio. A user selects or
+      creates an isolated agent, teaches procedures or uploads knowledge, and
+      then asks questions in Ask Mode. The application routes each input through
+      speech/document/perception handling, intent classification, the knowledge
+      gate, retrieval, optional Ollama generation, memory persistence, voice
+      output, and dashboard refresh.
+    </p>
+    <div class="callout good">
+      <strong>Core promise:</strong> a custom agent should answer from its
+      explicitly taught procedures and uploaded documents. If the required
+      knowledge is absent, the agent returns an unknown-knowledge response
+      instead of inventing an answer.
+    </div>
+    </section>
+
+    <section id="context"><h2>2. System context</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart LR
+        U[User] --> UI[Gradio web UI]
+        UI --> H[src/ui/handlers.py]
+        H --> I[Intent router]
+        H --> K[Agent knowledge gate]
+        H --> M[MemoryStore]
+        H --> L[Ollama / LLM]
+        H --> P[Perception]
+        H --> X[Executor]
+        H --> O[Dashboard outputs]
+        P --> A[Speech recognition]
+        P --> V[Camera / vision]
+        O --> UI
+        M --> DB[(SQLite primus_memory.db)]
+        L --> H
+      </div>
+    </div>
+    <p>
+      The dependency direction is intentionally one-way:
+      <code>app.py → ui/handlers.py → core, perception, metrics</code>.
+      Core and perception modules do not import the UI layer. This keeps the
+      business flow testable and prevents UI code from becoming a dependency
+      of storage or cognition.
+    </p>
+    </section>
+
+    <section id="layers"><h2>3. Main repository layers</h2>
+    <table>
+      <thead><tr><th>Layer</th><th>Location</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td>Entry point and wiring</td><td><code>app.py</code></td><td>Builds Gradio components, connects events, defines shared state, starts the timer, and launches the server.</td></tr>
+        <tr><td>Presentation/event handlers</td><td><code>src/ui/handlers.py</code></td><td>Agent CRUD, document upload, chat processing, intent decisions, HTML dashboard rendering, and output tuple construction.</td></tr>
+        <tr><td>Domain logic</td><td><code>src/core/intent.py</code>, <code>memory.py</code>, <code>agent_prompts.py</code></td><td>Classifies requests, maintains shared memory, and builds strict zero-prior prompts.</td></tr>
+        <tr><td>Persistence</td><td><code>src/core/storage.py</code></td><td>SQLite-backed agents, agent skills, documents, feedback, episodes, facts, and versions.</td></tr>
+        <tr><td>Optional persistence</td><td><code>src/core/postgres_store.py</code></td><td>PostgreSQL equivalent for deployments configured with the database backend.</td></tr>
+        <tr><td>Perception</td><td><code>src/perception/audio.py</code>, <code>vision.py</code></td><td>Speech-to-text, text-to-speech, camera state, labels, and snapshots.</td></tr>
+        <tr><td>Execution and metrics</td><td><code>src/core/executor.py</code>, <code>src/metrics/monitor.py</code></td><td>Task plans, execution events, scores, CPU/RAM/GPU telemetry, and dashboard panels.</td></tr>
+        <tr><td>Styling</td><td><code>src/ui/theme.py</code></td><td>Single CSS theme for the dashboard, agent lists, scroll areas, tables, voice controls, and responsive layout.</td></tr>
+      </tbody>
+    </table>
+    </section>
+
+    <section id="startup"><h2>4. Application startup and live refresh</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      sequenceDiagram
+        participant Browser
+        participant App as app.py
+        participant Handler as handlers.py
+        participant Store as MemoryStore
+        Browser->>App: Open local Gradio URL
+        App->>Handler: boot_all()
+        Handler->>Store: Load persisted state
+        Handler-->>App: Initial dashboard HTML values
+        App-->>Browser: Render tabs and components
+        loop Every 1.5 seconds
+          Browser->>App: Timer tick(active_agent_id)
+          App->>Handler: timer_tick(agent_id)
+          Handler->>Store: Read agent feedback/tasks/events
+          Handler-->>Browser: Metrics, Activity, Memory, Task Library
+        end
+      </div>
+    </div>
+    <p>
+      The timer is not the source of truth; it re-reads the source of truth.
+      Chat and learning handlers persist changes first, and the next
+      <code>gr.Timer</code> tick redraws the dashboard. This keeps Activity,
+      Memory, and Task Library synchronized after a request.
+    </p>
+    </section>
+
+    <section id="agents"><h2>5. Agent lifecycle</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart TD
+        A[Open Build Your Agent] --> B{Select existing agent?}
+        B -- No --> C[Enter name, domain, system prompt]
+        C --> D[Create / Update Agent]
+        D --> E[(agents table)]
+        B -- Yes --> F[Load name, domain, prompt into existing fields]
+        F --> G[Edit fields]
+        G --> D
+        E --> H[Refresh agent choices]
+        H --> I[Select or activate in Workspace]
+        I --> J[Use isolated skills, documents, and feedback]
+      </div>
+    </div>
+    <h3>Agent fields</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Stored value</th><th>How it is used</th></tr></thead>
+      <tbody>
+        <tr><td>Agent name</td><td><code>agents.name</code></td><td>Display name and identity in the system prompt.</td></tr>
+        <tr><td>Domain</td><td><code>agents.domain</code></td><td>Scope label only; it does not grant knowledge by itself.</td></tr>
+        <tr><td>System prompt</td><td><code>agents.instructions</code></td><td>Additional behavior, tone, and refusal rules, constrained by the zero-prior guardrail.</td></tr>
+        <tr><td>Agent ID</td><td><code>agents.id</code></td><td>Isolation key for skills, documents, feedback, and activity.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>Editing without extra UI:</strong> choosing an existing agent
+      populates the same three creation fields. The button then updates the
+      existing row when the hidden edit ID is present; otherwise it creates a
+      new agent.
+    </div>
+    </section>
+
+    <section id="data"><h2>6. Knowledge and data model</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      erDiagram
+        agents ||--o{ agent_skills : owns
+        agents ||--o{ agent_documents : owns
+        agents ||--o{ agent_feedback : produces
+        skills ||--o{ feedback_events : receives
+        skills ||--o{ skill_versions : has
+        agents {
+          text id PK
+          text name
+          text domain
+          text instructions
+          text created
+          text updated
+        }
+        agent_skills {
+          text id PK
+          text agent_id FK
+          text name
+          text steps_json
+          real confidence
+          text updated
+        }
+        agent_documents {
+          text id PK
+          text agent_id FK
+          text name
+          text content
+          text created
+        }
+        agent_feedback {
+          integer id PK
+          text agent_id FK
+          text skill_id
+          text event
+          real reward
+          text detail
+        }
+      </div>
+    </div>
+    <p>
+      Uploaded files are decoded by <code>_read_document_text()</code>. Supported
+      text-like files are read directly; PDFs use <code>pypdf</code> when
+      available. The file is stored as document content under the selected
+      agent. Retrieval uses token overlap in <code>find_agent_document()</code>,
+      followed by a bounded excerpt. The LLM receives only that excerpt and a
+      strict instruction not to use outside facts.
+    </p>
+    </section>
+
+    <section id="upload"><h2>7. Document upload flow</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart TD
+        A[User selects file] --> B{Selected custom agent?}
+        B -- No --> C[Show validation warning]
+        B -- Yes --> D[_read_document_text]
+        D --> E{Text extracted?}
+        E -- No --> F[Show extraction warning]
+        E -- Yes --> G[Store agent_documents row]
+        G --> H[Store learnt feedback value 0.75]
+        H --> I[Return friendly confirmation]
+        I --> J[Timer refreshes Activity, Memory, Task Library]
+      </div>
+    </div>
+    <p class="callout good">
+      Document learning is recorded as <strong>learnt = 0.75</strong>.
+      Explicitly taught procedures are recorded as <strong>learnt = 0.5</strong>.
+      A successful answer from a skill or document is <strong>recall = 1</strong>;
+      an unavailable answer is <strong>unknown = 0</strong>.
+    </p>
+    </section>
+
+    <section id="ask"><h2>8. Ask Mode: question-to-answer flow</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      sequenceDiagram
+        participant User
+        participant UI
+        participant P as process_input()
+        participant Gate as Knowledge gate
+        participant Store
+        participant LLM
+        User->>UI: Type question / send voice / attach file
+        UI->>P: text, audio, history, agent_id, mode, document
+        P->>P: Transcribe audio if present
+        P->>P: Add camera context if enabled
+        P->>Store: Ingest document if attached
+        P->>Gate: Classify intent and enforce Ask Mode
+        Gate->>Store: Search agent skill
+        alt Known procedure
+          Store-->>P: Skill and ordered steps
+          P->>Store: Save recall=1
+        else Matching document
+          Store-->>P: Document excerpt
+          P->>LLM: Strict prompt + excerpt only
+          LLM-->>P: Answer or fallback
+          P->>Store: Save recall=1
+        else No matching knowledge
+          P->>Store: Save unknown=0
+          P-->>UI: Unknown-knowledge response
+        end
+        P-->>UI: Chat, activity, memory, plan, voice, task outputs
+      </div>
+    </div>
+    <h3>Example using the legal document</h3>
+    <ol>
+      <li>Upload <code>legal_contract_review_policy.txt</code> to Legal Advisor.</li>
+      <li>Ask: “What should I check for termination and renewal?”</li>
+      <li>The token search finds the legal checklist and returns an excerpt-based answer.</li>
+      <li>Activity records <code>recall</code> with value <code>1</code>.</li>
+      <li>Ask: “What is the enforceability of this contract under local law?”</li>
+      <li>That jurisdiction-specific answer is outside the document, so the agent refuses and records <code>unknown</code> with value <code>0</code>.</li>
+    </ol>
+    </section>
+
+    <section id="learn"><h2>9. Learn Mode: teaching-only flow</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart TD
+        A[User switches to Learn Mode] --> B{Input type}
+        B -- Explicit task --> C[Parse task name and steps]
+        C --> D[Store agent_skills]
+        D --> E[Store learnt=0.5]
+        E --> F[Update task library and learning activity]
+        B -- Document upload --> G[Store agent_documents]
+        G --> H[Store learnt=0.75]
+        H --> F
+        B -- Question or casual text --> I[Do not answer or learn]
+        I --> J[Ask user to switch to Ask Mode]
+      </div>
+    </div>
+    <p>
+      Explicit teaching is recognized by <code>_is_explicit_teaching()</code>.
+      Question-shaped text that merely contains words such as “learn” or
+      “teach” is not treated as a teaching command. This prevents accidental
+      learning from ordinary questions.
+    </p>
+    </section>
+
+    <section id="voice"><h2>10. Voice input and voice reply</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart LR
+        A[Microphone button] --> B[Browser speech recognition]
+        B --> C[Transcript in chat textbox]
+        C --> D[User presses Send]
+        D --> E[process_input]
+        E --> F[Text answer]
+        F --> G{Voice reply enabled?}
+        G -- Yes --> H[Piper offline TTS]
+        H -- Failure --> I[edge-tts fallback]
+        I --> J[Audio player outputs]
+        G -- No --> K[Text-only response]
+      </div>
+    </div>
+    <p>
+      The current UX intentionally places the live transcript into the normal
+      message textbox. Stopping recognition leaves the text available for
+      review; pressing Send sends the exact text through the same chat path as
+      typed input. Voice reply generation is separate from recognition and is
+      controlled by the “Enable Voice Reply” checkbox.
+    </p>
+    </section>
+
+    <section id="dashboard"><h2>11. Learning &amp; Memory tab wiring</h2>
+    <div class="diagram">
+      <div class="mermaid">
+      flowchart TD
+        A[Chat / teach / document action] --> B[Persist event first]
+        B --> C{Active agent ID?}
+        C -- Yes --> D[Read agent_feedback and agent_skills]
+        C -- No --> E[Read shared feedback and memory]
+        D --> F[learning_table_html(agent_id)]
+        D --> G[memory_table_html(agent_id)]
+        D --> H[task_library_html(agent_id)]
+        E --> I[Shared Activity and Memory views]
+        F --> J[Learning tab]
+        G --> J
+        H --> J
+        J --> K[1.5-second timer refresh]
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Displayed event</th><th>Value</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>recall</code></td><td>1</td><td>The selected agent answered from a learned procedure or uploaded knowledge.</td></tr>
+        <tr><td><code>unknown</code></td><td>0</td><td>The selected agent could not find the answer in its isolated knowledge.</td></tr>
+        <tr><td><code>learnt</code></td><td>0.5</td><td>An explicit task was taught or edited.</td></tr>
+        <tr><td><code>learnt</code></td><td>0.75</td><td>A document was uploaded and stored as agent knowledge.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      The Learning tab is agent-scoped when an agent is selected. Switching
+      agents changes the feedback, memory-event list, and task library to that
+      agent. The shared/default workspace uses the shared memory tables.
+    </div>
+    </section>
+
+    <section id="outputs"><h2>12. Output contract between handlers and Gradio</h2>
+    <p>
+      Chat events use one shared output tuple so send, Enter, document upload,
+      and voice-related actions update the same surfaces. The tuple contains:
+    </p>
+    <ol>
+      <li>Chat history and state</li>
+      <li>Conversation message table and message state</li>
+      <li>Execution activity</li>
+      <li>Learning activity</li>
+      <li>Episodic memory table</li>
+      <li>Task plan and learning telemetry</li>
+      <li>Memory overview and task library</li>
+      <li>Agent knowledge overview</li>
+      <li>Voice reply players</li>
+      <li>Composer/document/sidebar updates</li>
+    </ol>
+    <p>
+      Keeping this positional contract aligned is critical. If an output is
+      inserted or reordered, every event declaration in <code>app.py</code>
+      must be updated at the same time.
+    </p>
+    </section>
+
+    <section id="security"><h2>13. Security, privacy, and knowledge boundaries</h2>
+    <ul>
+      <li>Custom agent documents and procedures are keyed by <code>agent_id</code>.</li>
+      <li>The custom prompt cannot override the strict zero-prior knowledge rules.</li>
+      <li>Document excerpts are bounded before being sent to the LLM.</li>
+      <li>Unknown questions should produce a refusal instead of a fabricated answer.</li>
+      <li>Medical, legal, finance, and home-maintenance agents include domain-specific safety boundaries in their prompts and documents.</li>
+      <li>File display uses the basename rather than exposing the temporary upload directory.</li>
+    </ul>
+    </section>
+
+    <section id="presentation"><h2>14. How to explain the system in five minutes</h2>
+    <ol>
+      <li><strong>Start with isolation:</strong> every custom agent has its own identity, instructions, tasks, documents, and feedback.</li>
+      <li><strong>Show creation:</strong> name, domain, and prompt are stored in the agent record; selecting an agent reloads those fields for editing.</li>
+      <li><strong>Show learning:</strong> a task is procedural knowledge; a document is searchable reference knowledge.</li>
+      <li><strong>Show answering:</strong> the knowledge gate checks the selected agent before the LLM is allowed to answer.</li>
+      <li><strong>Show evidence:</strong> the Learning tab reports recall, unknown, and learnt values, scoped to the active agent.</li>
+      <li><strong>Show multimodality:</strong> speech and camera are input adapters; they eventually use the same <code>process_input()</code> pipeline.</li>
+    </ol>
+    </section>
+
+    <section id="files"><h2>15. Key files to open while presenting</h2>
+    <table>
+      <thead><tr><th>File</th><th>Show this section</th></tr></thead>
+      <tbody>
+        <tr><td><code>app.py</code></td><td>Gradio tabs, event wiring, shared output tuple, timer, launch.</td></tr>
+        <tr><td><code>src/ui/handlers.py</code></td><td><code>process_input()</code>, document ingestion, agent CRUD, dashboard renderers.</td></tr>
+        <tr><td><code>src/core/storage.py</code></td><td>SQLite schema and agent isolation methods.</td></tr>
+        <tr><td><code>src/core/agent_prompts.py</code></td><td>Strict zero-prior system prompt.</td></tr>
+        <tr><td><code>src/core/intent.py</code></td><td>Teach, query, perform, and conversation classification.</td></tr>
+        <tr><td><code>src/perception/audio.py</code></td><td>Speech transcription and Piper/edge-tts voice output.</td></tr>
+        <tr><td><code>data/agent_documents/</code></td><td>Uploadable knowledge bases and agent creation templates.</td></tr>
+      </tbody>
+    </table>
+    </section>
+  </div>
+  <footer>
+    Generated for the current PRIMUS implementation. Open this file in a browser
+    with internet access to render Mermaid diagrams; the surrounding text and
+    flow descriptions remain readable if the diagram library is unavailable.
+  </footer>
+</main>
+</body>
+</html>
